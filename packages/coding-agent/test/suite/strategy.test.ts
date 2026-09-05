@@ -11,6 +11,7 @@ import {
 	type StrategyDecision,
 	type StrategyRunEvent,
 	type StrategyRunOptions,
+	type TaskDefinition,
 	type WorkReport,
 } from "../../src/core/strategy/index.js";
 import { createHarness, getMessageText, type Harness } from "./harness.js";
@@ -63,13 +64,21 @@ describe("strategy loop", () => {
 		for (const harness of harnesses.splice(0)) harness.cleanup();
 	});
 
-	async function setup(overrides: Partial<StrategyRunOptions> = {}) {
+	async function setup(
+		overrides: Partial<StrategyRunOptions> & {
+			customTools?: ReturnType<NonNullable<TaskDefinition["createTools"]>>;
+		} = {},
+	) {
 		const harness = await createHarness();
 		harnesses.push(harness);
 		const events: StrategyRunEvent[] = [];
 		const options: StrategyRunOptions = {
-			objective: "Improve the candidate",
-			successCriteria: "A measured improvement or an evidenced stop.",
+			task: {
+				objective: "Improve the candidate",
+				successCriteria: "A measured improvement or an evidenced stop.",
+				tools: [],
+				createTools: () => overrides.customTools ?? [],
+			},
 			cwd: harness.tempDir,
 			agentDir: join(harness.tempDir, "agent"),
 			outputDir: join(harness.tempDir, "runs"),
@@ -77,7 +86,6 @@ describe("strategy loop", () => {
 			authStorage: harness.authStorage,
 			modelRegistry: harness.session.modelRegistry,
 			resourceLoader: harness.session.resourceLoader,
-			tools: [],
 			onEvent: (event) => events.push(event),
 			...overrides,
 		};
@@ -460,7 +468,7 @@ describe("strategy loop", () => {
 		expect(parseStrategyArgs(["--help"])).toBeUndefined();
 		expect(
 			parseStrategyArgs(["--objective", "Fix it", "--success-criteria", "Checks pass", "--max-steps", "2"]),
-		).toMatchObject({ objective: "Fix it", successCriteria: "Checks pass", limits: { maxSteps: 2 } });
+		).toMatchObject({ task: { objective: "Fix it", successCriteria: "Checks pass" }, limits: { maxSteps: 2 } });
 		for (const count of ["0", "-1", "1.5", "2x", "1e3"]) {
 			expect(() =>
 				parseStrategyArgs(["--objective", "Fix it", "--success-criteria", "Checks pass", `--max-steps=${count}`]),

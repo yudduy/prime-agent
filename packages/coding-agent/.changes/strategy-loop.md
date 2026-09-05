@@ -1,1 +1,2 @@
 - Added an opt-in SDK strategy loop that reviews bounded work, continues or switches worker sessions, and saves decisions and evidence.
+- Added task definitions with host-owned result checks and stable run identities across strategy changes.

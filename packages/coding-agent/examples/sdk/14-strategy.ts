@@ -39,8 +39,7 @@ export function parseStrategyArgs(args: string[]): StrategyRunOptions | undefine
 		throw new Error("--max-steps must be a positive integer.");
 	}
 	return {
-		objective: values.objective,
-		successCriteria: values["success-criteria"],
+		task: { objective: values.objective, successCriteria: values["success-criteria"] },
 		cwd: values.cwd,
 		outputDir: values["output-dir"],
 		limits: maxSteps === undefined ? undefined : { maxSteps: Number(maxSteps) },

@@ -1,4 +1,5 @@
 import { type Static, Type } from "typebox";
+import type { ToolDefinition } from "../extensions/index.js";
 import type { CreateAgentSessionOptions } from "../sdk.js";
 import type { Settings } from "../settings-manager.js";
 
@@ -84,15 +85,50 @@ export const DEFAULT_STRATEGY_LIMITS: Readonly<StrategyLimits> = {
 	runTimeoutMs: 30 * 60_000,
 };
 
-export interface Evidence {
+export type Evidence = {
 	id: string;
 	sessionId: string;
 	step: number;
-	toolName: string;
-	toolCallId: string;
 	isError: boolean;
 	path: string;
 	preview: string;
+} & ({ source: "tool"; toolName: string; toolCallId: string } | { source: "check" });
+
+export const taskCheckSchema = Type.Object(
+	{
+		status: Type.Union([
+			Type.Literal("passed"),
+			Type.Literal("failed"),
+			Type.Literal("inconclusive"),
+			Type.Literal("error"),
+		]),
+		summary: text,
+		/** Original check output, such as test results or source-supported findings. */
+		details: Type.String(),
+	},
+	{ additionalProperties: false },
+);
+
+export type TaskCheck = Static<typeof taskCheckSchema>;
+
+export interface TaskContext {
+	readonly runId: string;
+	readonly cwd: string;
+	readonly outputDir: string;
+	readonly signal: AbortSignal;
+}
+
+export interface TaskDefinition {
+	objective: string;
+	successCriteria: string;
+	constraints?: string[];
+	initialContext?: string;
+	/** Built-in worker tools. Defaults to ipython. */
+	tools?: string[];
+	/** Called once per run. All workers share these tools and the same run identity. */
+	createTools?: (context: TaskContext) => ToolDefinition[];
+	/** Host-owned check after each step. Must await its work and honor cancellation. */
+	checkResult?: (result: WorkResult, context: TaskContext) => Promise<TaskCheck>;
 }
 
 export interface WorkResult {
@@ -103,6 +139,7 @@ export interface WorkResult {
 	report?: WorkReport;
 	error?: string;
 	evidence: Evidence[];
+	check?: TaskCheck & { evidenceId: string };
 }
 
 export interface StrategyUsage {
@@ -116,16 +153,26 @@ export interface StrategyUsage {
 export type StrategyStopReason = "strategy_stop" | "limit_reached" | "cancelled" | "error";
 
 export interface StrategyRunResult {
+	runId: string;
 	assessment: string;
 	stopReason: StrategyStopReason;
 	strategies: Strategy[];
 	steps: WorkResult[];
 	usage: StrategyUsage;
 	outputDir: string;
+	check?: WorkResult["check"];
 }
 
 type EventData =
-	| { type: "run_started"; objective: string; successCriteria: string; limits: StrategyLimits; cwd: string }
+	| {
+			type: "run_started";
+			runId: string;
+			objective: string;
+			successCriteria: string;
+			constraints: string[];
+			limits: StrategyLimits;
+			cwd: string;
+	  }
 	| { type: "session_started"; role: "strategist" | "worker"; sessionId: string; sessionFile: string | undefined }
 	| { type: "session_closed"; sessionId: string }
 	| { type: "decision"; decision: StrategyDecision }
@@ -149,13 +196,8 @@ export interface StrategyRunOptions
 		| "serviceTier"
 		| "resourceLoader"
 	> {
-	objective: string;
-	successCriteria: string;
-	initialContext?: string;
+	task: TaskDefinition;
 	settings?: Partial<Settings>;
-	/** Built-in worker tools. Defaults to ipython; customTools are enabled separately. */
-	tools?: string[];
-	customTools?: CreateAgentSessionOptions["customTools"];
 	limits?: Partial<StrategyLimits>;
 	/** Parent directory for a new run directory. Existing runs are never reopened. */
 	outputDir?: string;

@@ -254,6 +254,9 @@ export {
 	type StrategyRunResult,
 	type StrategyStopReason,
 	type StrategyUsage,
+	type TaskCheck,
+	type TaskContext,
+	type TaskDefinition,
 	type WorkReport,
 	type WorkResult,
 } from "./core/strategy/index.js";

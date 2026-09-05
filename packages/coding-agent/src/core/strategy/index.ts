@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { appendFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { Type } from "typebox";
@@ -11,6 +12,7 @@ import { DefaultResourceLoader, type ResourceLoader } from "../resource-loader.j
 import { createAgentSession } from "../sdk.js";
 import { SessionManager } from "../session-manager.js";
 import { SettingsManager } from "../settings-manager.js";
+import { checkResult } from "./check.js";
 import { errorText, PendingWork, type ResultSlot, runSession } from "./session.js";
 import {
 	DEFAULT_STRATEGY_LIMITS,
@@ -24,6 +26,7 @@ import {
 	type StrategyUsage,
 	strategyDecisionSchema,
 	strategyToolSchema,
+	type TaskContext,
 	type WorkReport,
 	type WorkResult,
 	workReportSchema,
@@ -39,6 +42,9 @@ export type {
 	StrategyRunResult,
 	StrategyStopReason,
 	StrategyUsage,
+	TaskCheck,
+	TaskContext,
+	TaskDefinition,
 	WorkReport,
 	WorkResult,
 } from "./types.js";
@@ -48,7 +54,11 @@ const strategistPrompt = `You select the approach for a task. You do not execute
 Compare continuing the current approach with a plausible alternative. Explain why the next step is worth doing,
 what it should teach, and the strongest objection to your choice. Repeated local changes without new evidence
 deserve review, but a plateau alone does not require switching. Distinguish execution failures, missing information,
-and evidence against an approach. Treat worker reports as claims and inspect recorded tool evidence when needed.
+and evidence against an approach. Treat worker reports as claims and inspect recorded evidence when needed.
+Task checks come from the host: failed means the checked criteria were not met; error means the check did not work;
+inconclusive means the evidence does not settle the question. Your assessment is separate from these checks.
+A step can be worthwhile because it tests an assumption or finds a counterexample, even without improving a score.
+Reconsider the explanation of the problem and the method while preserving the caller's objective and constraints.
 Use start only for the first approach, continue for another step within it, switch for a different approach, or stop.
 Respect the fixed objective and limits. Stop may mean completion or that no useful next step remains; explain which.
 Use choose_strategy as your final and sole tool call in that response. Your decision controls the next assignment.`;
@@ -72,19 +82,18 @@ function readLimits(overrides: Partial<StrategyLimits> = {}): StrategyLimits {
 
 /** Run bounded work under a fresh strategic review after each step. */
 export async function runWithStrategy(options: StrategyRunOptions): Promise<StrategyRunResult> {
-	if (!options.objective.trim() || !options.successCriteria.trim()) {
+	const task = { ...options.task, constraints: [...(options.task.constraints ?? [])] };
+	if (!task.objective.trim() || !task.successCriteria.trim()) {
 		throw new Error("An objective and success criteria are required.");
 	}
 	const limits = readLimits(options.limits);
 	const reservedTools = new Set(["choose_strategy", "report_result", "read_evidence"]);
-	if (options.customTools?.some((tool) => reservedTools.has(tool.name))) {
-		throw new Error("Custom tools cannot replace strategy tools.");
-	}
 	const cwd = resolve(options.cwd ?? process.cwd());
 	const agentDir = options.agentDir ?? getAgentDir();
 	const parentDir = resolve(options.outputDir ?? join(agentDir, "strategy-runs"));
 	await mkdir(parentDir, { recursive: true });
 	const outputDir = await mkdtemp(join(parentDir, "run-"));
+	const runId = randomUUID();
 	await mkdir(join(outputDir, "evidence"));
 	const historyPath = join(outputDir, "history.jsonl");
 	const strategies: Strategy[] = [];
@@ -105,6 +114,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 	const cancel = () => runAbort.abort();
 	options.signal?.addEventListener("abort", cancel, { once: true });
 	if (options.signal?.aborted) cancel();
+	const context: TaskContext = Object.freeze({ runId, cwd, outputDir, signal: runAbort.signal });
 	const startedAt = Date.now();
 	const runTimer = setTimeout(() => {
 		runTimedOut = true;
@@ -172,11 +182,18 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 	try {
 		await saveEvent({
 			type: "run_started",
-			objective: options.objective,
-			successCriteria: options.successCriteria,
+			runId,
+			objective: task.objective,
+			successCriteria: task.successCriteria,
+			constraints: task.constraints,
 			cwd,
 			limits,
 		});
+		runAbort.signal.throwIfAborted();
+		const customTools = task.createTools?.(context) ?? [];
+		if (customTools.some((tool) => reservedTools.has(tool.name))) {
+			throw new Error("Custom tools cannot replace strategy tools.");
+		}
 		const authStorage =
 			options.authStorage ?? AuthStorage.create(options.agentDir ? join(agentDir, "auth.json") : undefined);
 		const modelRegistry = options.modelRegistry ?? ModelRegistry.create(authStorage, join(agentDir, "models.json"));
@@ -221,7 +238,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 			const toolNames =
 				role === "strategist"
 					? tools.map((tool) => tool.name)
-					: [...(options.tools ?? ["ipython"]), ...tools.map((tool) => tool.name)];
+					: [...(task.tools ?? ["ipython"]), ...tools.map((tool) => tool.name)];
 			const { session } = await createAgentSession({
 				cwd,
 				agentDir,
@@ -269,9 +286,10 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 
 		function taskContext() {
 			return {
-				objective: options.objective,
-				successCriteria: options.successCriteria,
-				initialContext: options.initialContext,
+				objective: task.objective,
+				successCriteria: task.successCriteria,
+				constraints: task.constraints,
+				initialContext: task.initialContext,
 				currentStrategy,
 				strategies,
 				latestResult: steps.at(-1),
@@ -338,7 +356,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 		}
 
 		async function createWorker(): Promise<AgentSession> {
-			const session = await createSession("worker", [...(options.customTools ?? []), readEvidence, reportResult]);
+			const session = await createSession("worker", [...customTools, readEvidence, reportResult]);
 			const afterTool = session.agent.afterToolCall;
 			session.agent.afterToolCall = (context, signal) =>
 				pendingWork
@@ -359,6 +377,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 							{ flag: "wx", mode: 0o600 },
 						);
 						const record: Evidence = {
+							source: "tool",
 							id,
 							sessionId: session.sessionId,
 							step: steps.length + 1,
@@ -394,6 +413,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 			if (!workerSession || !currentStrategy) throw new Error("No worker is assigned to the strategy.");
 			const session = workerSession;
 			const step = steps.length + 1;
+			const stepStartedAt = Date.now();
 			workReport = { closed: false };
 			await saveEvent({
 				type: "step_started",
@@ -411,9 +431,10 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 				timeoutMs: limits.stepTimeoutMs,
 				signal: runAbort.signal,
 				prompt: `Carry out this work step.\n${JSON.stringify({
-					objective: options.objective,
-					successCriteria: options.successCriteria,
-					initialContext: options.initialContext,
+					objective: task.objective,
+					successCriteria: task.successCriteria,
+					constraints: task.constraints,
+					initialContext: task.initialContext,
 					assignment: decision,
 					latestResult: steps.at(-1),
 					evidence: decision.evidenceIds.map((id) => evidence.get(id)),
@@ -428,6 +449,30 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 				error: result.error,
 				evidence: [...evidence.values()].filter((record) => record.step === step),
 			};
+			if (task.checkResult) {
+				const checked = await checkResult(
+					task.checkResult,
+					work,
+					context,
+					limits.stepTimeoutMs - (Date.now() - stepStartedAt),
+				);
+				const id = `evidence-${evidence.size + 1}`;
+				const path = join(outputDir, "evidence", `${id}.json`);
+				await writeFile(path, JSON.stringify(checked), { flag: "wx", mode: 0o600 });
+				const record: Evidence = {
+					source: "check",
+					id,
+					path,
+					step,
+					sessionId: session.sessionId,
+					isError: checked.status === "error",
+					preview: JSON.stringify(checked).slice(0, 1200),
+				};
+				evidence.set(id, record);
+				work.evidence.push(record);
+				work.check = { ...checked, evidenceId: id };
+				await saveEvent({ type: "evidence", evidence: record });
+			}
 			steps.push(work);
 			currentStrategy.steps++;
 			await saveEvent({ type: "step_finished", result: work });
@@ -478,7 +523,16 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 		stopReason = "error";
 		assessment = hostError;
 	}
-	const result: StrategyRunResult = { assessment, stopReason, strategies, steps, usage, outputDir };
+	const result: StrategyRunResult = {
+		runId,
+		assessment,
+		stopReason,
+		strategies,
+		steps,
+		usage,
+		outputDir,
+		check: steps.at(-1)?.check,
+	};
 	await saveEvent({ type: "run_finished", result });
 	return result;
 }
