@@ -84,5 +84,33 @@ The check shares the work step's time budget and must honor `context.signal` and
 
 Check output is saved as registered evidence with `source: "check"`, separately from `source: "tool"` receipts and the worker report. Each step exposes `check`; the run's `check` is the latest step's check, not an earlier passing result. Both roles receive the latest check and can inspect original evidence using `read_evidence`. A passing check does not automatically stop the strategist. If no step or checker ran, `check` is absent.
 
+## Research harness integration
+
+The [research task example](../examples/sdk/research-task.ts) connects the existing autoresearch controller through its public methods. Benchmark schemas stay in the example. Caller configuration fixes the benchmark scope, and `runId` owns jobs and lineage across worker switches.
+
+With an existing controller and a checker for its measurements:
+
+```typescript
+import { createResearchTask } from "./research-task.js";
+
+const task = createResearchTask({
+  controller,
+  scope: {
+    lane: "compiler-gym",
+    benchmarkIds: taskIds,
+    budgetClass: "screen",
+    treatment: "strategy",
+  },
+  objective: "Reduce instruction count while preserving program behavior",
+  successCriteria: "The agreed verifier passes and the target instruction count is met",
+  checkResult: (jobs, work, context) => checkMeasurements(jobs, work, context.signal),
+});
+
+const result = await runWithStrategy({ task, cwd: projectDirectory });
+```
+
+`controller`, `taskIds`, `checkMeasurements`, and `projectDirectory` are supplied by the calling harness. A succeeded evaluation job establishes that evaluation completed; the checker still decides whether the task's success criteria were met.
+
+The worker can submit a candidate or recall all results in this run, including failed attempts and earlier workers. Submission waits for a terminal job state. On cancellation, the bridge requests cancellation of that job and awaits its terminal state before returning. The controller must report terminal state only after the evaluator's work and cleanup have settled. Each job remains subject to the controller's own resource limits; strategy usage does not meter external compute.
 
 `stopReason` is `strategy_stop`, `limit_reached`, `cancelled`, or `error`. A strategist's assessment can describe completion or a reason to stop pursuing the task. It is separate from the host-owned `check`. The command-line runner supplies no checker, so its assessment alone does not establish verified completion. `usage` sums usage reported on assistant messages, including repeated context. It does not meter external jobs launched by tools.

@@ -26,6 +26,7 @@ The runtime example shows how to build a recreate function that closes over proc
 | `12-full-control.ts` | Replace everything, no discovery |
 | `13-session-runtime.ts` | Manage runtime-backed session replacement |
 | `14-strategy.ts` | Run bounded work with automatic strategy review and fresh workers on a switch |
+| `research-task.ts` | Bind an autoresearch controller to a strategy task with stable job ownership and awaited cancellation |
 
 ## Running
 
