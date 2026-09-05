@@ -1,6 +1,7 @@
 import { appendFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { Type } from "typebox";
+import { Check } from "typebox/value";
 import { getAgentDir } from "../../config.js";
 import type { AgentSession } from "../agent-session.js";
 import { AuthStorage } from "../auth-storage.js";
@@ -22,6 +23,7 @@ import {
 	type StrategyRunResult,
 	type StrategyUsage,
 	strategyDecisionSchema,
+	strategyToolSchema,
 	type WorkReport,
 	type WorkResult,
 	workReportSchema,
@@ -96,6 +98,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 	let workerSession: AgentSession | undefined;
 	let workReport: ResultSlot<WorkReport> = { closed: true };
 	let runTimedOut = false;
+	let hostError: string | undefined;
 	let assessment = "The work-step limit was reached.";
 	let stopReason: StrategyRunResult["stopReason"] = "limit_reached";
 	const runAbort = new AbortController();
@@ -283,10 +286,15 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 				name: "choose_strategy",
 				label: "Choose strategy",
 				description: "Choose the next work step or stop the run.",
-				parameters: strategyDecisionSchema,
+				parameters: strategyToolSchema,
 				executionMode: "sequential",
 				async execute(_id, params) {
 					if (result.closed) throw new Error("This strategic review has ended.");
+					if (!Check(strategyDecisionSchema, params)) {
+						throw new Error(
+							"Work decisions require approach, nextStep, expectedEvidence, reviewWhen, alternative, and concern. Stop requires only action, reason, and evidenceIds.",
+						);
+					}
 					checkEvidence(params.evidenceIds);
 					if (
 						(!currentStrategy && ["continue", "switch"].includes(params.action)) ||
@@ -333,46 +341,52 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 			const session = await createSession("worker", [...(options.customTools ?? []), readEvidence, reportResult]);
 			const afterTool = session.agent.afterToolCall;
 			session.agent.afterToolCall = (context, signal) =>
-				pendingWork.track(async () => {
-					const previous = await afterTool?.(context, signal);
-					if (reservedTools.has(context.toolCall.name)) return previous;
-					const output = { ...context.result, ...previous };
-					const id = `evidence-${evidence.size + 1}`;
-					const path = join(outputDir, "evidence", `${id}.json`);
-					await writeFile(
-						path,
-						JSON.stringify({
-							tool: context.toolCall.name,
-							arguments: context.args,
-							result: output,
+				pendingWork
+					.track(async () => {
+						const previous = await afterTool?.(context, signal);
+						if (reservedTools.has(context.toolCall.name)) return previous;
+						const output = { ...context.result, ...previous };
+						const id = `evidence-${evidence.size + 1}`;
+						const path = join(outputDir, "evidence", `${id}.json`);
+						await writeFile(
+							path,
+							JSON.stringify({
+								tool: context.toolCall.name,
+								arguments: context.args,
+								result: output,
+								isError: previous?.isError ?? context.isError,
+							}),
+							{ flag: "wx", mode: 0o600 },
+						);
+						const record: Evidence = {
+							id,
+							sessionId: session.sessionId,
+							step: steps.length + 1,
+							toolName: context.toolCall.name,
+							toolCallId: context.toolCall.id,
 							isError: previous?.isError ?? context.isError,
-						}),
-						{ flag: "wx", mode: 0o600 },
-					);
-					const record: Evidence = {
-						id,
-						sessionId: session.sessionId,
-						step: steps.length + 1,
-						toolName: context.toolCall.name,
-						toolCallId: context.toolCall.id,
-						isError: previous?.isError ?? context.isError,
-						path,
-						preview: output.content
-							.filter((part) => part.type === "text")
-							.map((part) => part.text)
-							.join("\n")
-							.slice(0, 1200),
-					};
-					evidence.set(id, record);
-					await saveEvent({ type: "evidence", evidence: record });
-					return {
-						...previous,
-						content: [
-							...output.content,
-							{ type: "text", text: `Saved as ${id}. Use read_evidence for the original output.` },
-						],
-					};
-				});
+							path,
+							preview: output.content
+								.filter((part) => part.type === "text")
+								.map((part) => part.text)
+								.join("\n")
+								.slice(0, 1200),
+						};
+						evidence.set(id, record);
+						await saveEvent({ type: "evidence", evidence: record });
+						return {
+							...previous,
+							content: [
+								...output.content,
+								{ type: "text" as const, text: `Saved as ${id}. Use read_evidence for the original output.` },
+							],
+						};
+					})
+					.catch((error: unknown) => {
+						hostError = `Could not save tool evidence: ${errorText(error)}`;
+						runAbort.abort();
+						throw error;
+					});
 			return session;
 		}
 
@@ -452,14 +466,17 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 			try {
 				await closeSession(session);
 			} catch (error) {
-				assessment = `Session cleanup failed: ${errorText(error)}`;
-				stopReason = "error";
+				hostError = `Session cleanup failed: ${errorText(error)}`;
 			}
 		}
 	}
 	if (runAbort.signal.aborted) {
 		stopReason = runTimedOut ? "limit_reached" : "cancelled";
 		assessment = runTimedOut ? "The run time limit was reached." : "The caller cancelled the run.";
+	}
+	if (hostError) {
+		stopReason = "error";
+		assessment = hostError;
 	}
 	const result: StrategyRunResult = { assessment, stopReason, strategies, steps, usage, outputDir };
 	await saveEvent({ type: "run_finished", result });

@@ -23,6 +23,27 @@ export const strategyDecisionSchema = Type.Union([
 	Type.Object({ action: Type.Literal("stop"), reason: text, evidenceIds }, { additionalProperties: false }),
 ]);
 
+// Providers expect an object at the root of a function's parameter schema.
+export const strategyToolSchema = Type.Object(
+	{
+		action: Type.Union([
+			Type.Literal("start"),
+			Type.Literal("continue"),
+			Type.Literal("switch"),
+			Type.Literal("stop"),
+		]),
+		reason: text,
+		evidenceIds,
+		approach: Type.Optional(text),
+		nextStep: Type.Optional(text),
+		expectedEvidence: Type.Optional(text),
+		reviewWhen: Type.Optional(text),
+		alternative: Type.Optional(text),
+		concern: Type.Optional(text),
+	},
+	{ additionalProperties: false },
+);
+
 export const workReportSchema = Type.Object(
 	{
 		changes: Type.String(),
@@ -132,7 +153,7 @@ export interface StrategyRunOptions
 	successCriteria: string;
 	initialContext?: string;
 	settings?: Partial<Settings>;
-	/** Worker tools. Defaults to ipython; custom tools must also be named here. */
+	/** Built-in worker tools. Defaults to ipython; customTools are enabled separately. */
 	tools?: string[];
 	customTools?: CreateAgentSessionOptions["customTools"];
 	limits?: Partial<StrategyLimits>;

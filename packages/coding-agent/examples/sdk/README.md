@@ -25,6 +25,7 @@ The runtime example shows how to build a recreate function that closes over proc
 | `11-sessions.ts` | In-memory, persistent, continue, list sessions |
 | `12-full-control.ts` | Replace everything, no discovery |
 | `13-session-runtime.ts` | Manage runtime-backed session replacement |
+| `14-strategy.ts` | Run bounded work with automatic strategy review and fresh workers on a switch |
 
 ## Running
 
@@ -32,6 +33,8 @@ The runtime example shows how to build a recreate function that closes over proc
 cd packages/coding-agent
 npx tsx examples/sdk/01-minimal.ts
 ```
+
+See [Strategy loop](../../docs/strategy.md) for the strategy runner, SDK options, evidence, and stop reasons.
 
 ## Quick Reference
 

@@ -1,8 +1,10 @@
+import { mkdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { type Context, fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { parseStrategyArgs } from "../../examples/sdk/14-strategy.js";
 import { defineTool } from "../../src/core/extensions/index.js";
 import {
 	runWithStrategy,
@@ -57,6 +59,7 @@ const conversation = (context: Context) => context.messages.map(getMessageText).
 describe("strategy loop", () => {
 	const harnesses: Harness[] = [];
 	afterEach(() => {
+		vi.useRealTimers();
 		for (const harness of harnesses.splice(0)) harness.cleanup();
 	});
 
@@ -95,6 +98,7 @@ describe("strategy loop", () => {
 		harness.setResponses([
 			(context) => {
 				expect(context.tools?.map((tool) => tool.name).sort()).toEqual(["choose_strategy", "read_evidence"]);
+				for (const tool of context.tools ?? []) expect(tool.parameters).toMatchObject({ type: "object" });
 				return call("choose_strategy", decision("start"));
 			},
 			fauxAssistantMessage([{ type: "text", text: "private-worker-narrative" }, fauxToolCall("measure", {})], {
@@ -274,5 +278,194 @@ describe("strategy loop", () => {
 		expect(result.steps[0].status).toBe("cancelled");
 		expect(events.at(-2)?.type).toBe("session_closed");
 		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
+	it("lets a fresh reviewer read original evidence beyond its preview", async () => {
+		const content = `${"x".repeat(3000)} full-output-proof`;
+		const measure = defineTool({
+			name: "measure",
+			label: "Measure",
+			description: "Measure",
+			parameters: Type.Object({}),
+			async execute() {
+				return { content: [{ type: "text", text: content }], details: {} };
+			},
+		});
+		const { harness, options } = await setup({ customTools: [measure] });
+		harness.setResponses([
+			call("choose_strategy", decision("start")),
+			call("measure", {}),
+			call("report_result", report(["evidence-1"])),
+			(context) => {
+				expect(conversation(context)).not.toContain("full-output-proof");
+				return call("read_evidence", { id: "../../not-registered" });
+			},
+			(context) => {
+				expect(conversation(context)).toContain("Unknown evidence");
+				return call("read_evidence", { id: "evidence-1" });
+			},
+			(context) => {
+				expect(conversation(context)).toContain("full-output-proof");
+				return stop();
+			},
+		]);
+		expect((await runWithStrategy(options)).stopReason).toBe("strategy_stop");
+	});
+
+	it("passes tool execution failures to review as failures of execution", async () => {
+		const broken = defineTool({
+			name: "broken",
+			label: "Broken",
+			description: "Broken",
+			parameters: Type.Object({}),
+			async execute() {
+				throw new Error("fixture service unavailable");
+			},
+		});
+		const { harness, options } = await setup({ customTools: [broken] });
+		harness.setResponses([
+			call("choose_strategy", decision("start")),
+			call("broken", {}),
+			call("report_result", report(["evidence-1"])),
+			(context) => {
+				expect(conversation(context)).toContain('"isError":true');
+				expect(conversation(context)).toContain("fixture service unavailable");
+				return stop();
+			},
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("strategy_stop");
+		expect(result.steps[0].evidence[0].isError).toBe(true);
+	});
+
+	it("passes a provider failure back to review without automatic retries", async () => {
+		const { harness, options } = await setup();
+		harness.setResponses([
+			call("choose_strategy", decision("start")),
+			fauxAssistantMessage("", { stopReason: "error", errorMessage: "fixture provider failed" }),
+			(context) => {
+				expect(conversation(context)).toContain("fixture provider failed");
+				return stop();
+			},
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("strategy_stop");
+		expect(result.steps[0].status).toBe("error");
+	});
+
+	it.each(["step", "run"] as const)("enforces the %s timeout while a tool runs", async (limit) => {
+		let notifyStarted: () => void = () => {};
+		const started = new Promise<void>((resolve) => {
+			notifyStarted = resolve;
+		});
+		let settled = false;
+		const wait = defineTool({
+			name: "wait",
+			label: "Wait",
+			description: "Wait",
+			parameters: Type.Object({}),
+			async execute(_id, _params, signal) {
+				notifyStarted();
+				await new Promise<void>((resolve) =>
+					signal?.addEventListener(
+						"abort",
+						() => {
+							settled = true;
+							resolve();
+						},
+						{ once: true },
+					),
+				);
+				return { content: [], details: {} };
+			},
+		});
+		const { harness, options } = await setup({
+			customTools: [wait],
+			limits: limit === "step" ? { stepTimeoutMs: 1000 } : { runTimeoutMs: 1000 },
+		});
+		harness.setResponses([call("choose_strategy", decision("start")), call("wait", {}), stop()]);
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+		const running = runWithStrategy(options);
+		await started;
+		await vi.advanceTimersByTimeAsync(1000);
+		const result = await running;
+		expect(settled).toBe(true);
+		expect(result.stopReason).toBe(limit === "step" ? "strategy_stop" : "limit_reached");
+		expect(result.steps[0].status).toBe(limit === "step" ? "timeout" : "cancelled");
+	});
+
+	it("does not call a provider when already cancelled", async () => {
+		const controller = new AbortController();
+		controller.abort();
+		const { harness, options } = await setup({ signal: controller.signal });
+		harness.setResponses([stop()]);
+		expect((await runWithStrategy(options)).stopReason).toBe("cancelled");
+		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
+	it("stops when tool evidence cannot be saved", async () => {
+		const work = defineTool({
+			name: "work",
+			label: "Work",
+			description: "Work",
+			parameters: Type.Object({}),
+			async execute() {
+				return { content: [], details: {} };
+			},
+		});
+		const { harness, options } = await setup({ customTools: [work] });
+		options.onEvent = (event) => {
+			if (event.type === "session_started" && event.role === "worker") {
+				mkdirSync(join(dirname(dirname(event.sessionFile!)), "evidence", "evidence-1.json"));
+			}
+		};
+		harness.setResponses([call("choose_strategy", decision("start")), call("work", {}), stop()]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("error");
+		expect(result.assessment).toContain("Could not save tool evidence");
+		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
+	it("validates action-specific fields before choosing work", async () => {
+		const { harness, options } = await setup();
+		harness.setResponses([
+			call("choose_strategy", { action: "start", reason: "Try it", evidenceIds: [] }),
+			(context) => {
+				expect(conversation(context)).toContain("Work decisions require");
+				return stop();
+			},
+		]);
+		expect((await runWithStrategy(options)).steps).toHaveLength(0);
+	});
+
+	it("keeps project instructions while isolating managed session settings", async () => {
+		const { harness, options } = await setup();
+		options.resourceLoader = {
+			...harness.session.resourceLoader,
+			getAgentsFiles: () => ({
+				agentsFiles: [{ path: join(harness.tempDir, "AGENTS.md"), content: "project-rule-marker" }],
+			}),
+		};
+		harness.setResponses([
+			(context) => {
+				expect(context.systemPrompt).toContain("project-rule-marker");
+				return stop();
+			},
+		]);
+		expect((await runWithStrategy(options)).stopReason).toBe("strategy_stop");
+		expect(harness.settingsManager.getAutoRefineSettings().enabled).toBe(true);
+	});
+
+	it("parses runner options without starting a run", () => {
+		expect(parseStrategyArgs(["--help"])).toBeUndefined();
+		expect(
+			parseStrategyArgs(["--objective", "Fix it", "--success-criteria", "Checks pass", "--max-steps", "2"]),
+		).toMatchObject({ objective: "Fix it", successCriteria: "Checks pass", limits: { maxSteps: 2 } });
+		for (const count of ["0", "-1", "1.5", "2x", "1e3"]) {
+			expect(() =>
+				parseStrategyArgs(["--objective", "Fix it", "--success-criteria", "Checks pass", `--max-steps=${count}`]),
+			).toThrow("positive integer");
+		}
+		expect(() => parseStrategyArgs([])).toThrow("--objective");
 	});
 });
