@@ -1,0 +1,5 @@
+--- a/train_gpt_simple.py
++++ b/train_gpt_simple.py
+@@ -281 +281 @@
+-    train_steps = 3290
++    train_steps = 3290

@@ -1,0 +1,11 @@
+schema=prime-compiler-gym-site-data-v2
+root=/scratch/users/duynguy/prime-autoresearch/compiler-gym-site-v2
+cbench-linux-bitcode-archive-sha256=601fff3944c866f6617e653b6eb5c1521382c935f56ca1f36a9f5cf1a49f3de5
+cbench-compressed-manifest-sha256=eeffd7593aeb696a160fd22e6b0c382198a65d0918b8440253ea458cfe927741
+cbench-runtime-data-archive-sha256=a1b5b5d6b115e5809ccaefc2134434494271d184da67e2ee43d7f84d07329055
+cbench-bitcode-files=23
+cbench-bitcode-manifest-bytes=1901
+cbench-bitcode-tree-manifest-sha256=3447f0794f8e981ff72305cc4efd8e891bb3f348aeb25d189fb0915a39a322cb
+cbench-runtime-files=571
+cbench-runtime-manifest-bytes=54171
+cbench-runtime-tree-manifest-sha256=238784ee2032baa43e65a47aa00b13cc805430ffec70952b3dcaa4466a04c8c6

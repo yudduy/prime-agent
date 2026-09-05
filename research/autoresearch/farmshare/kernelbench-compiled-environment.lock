@@ -1,0 +1,11 @@
+schema=prime-kernelbench-compiled-environment-v1
+python=3.12.3
+pip=25.2
+torch=2.11.0
+torch-cuda=12.8
+torch-index-url=https://download.pytorch.org/whl/cu128
+numpy=2.5.2
+numpy-wheel-url=https://files.pythonhosted.org/packages/3a/5f/62d28cf019460c7f1394105b4d49d9911a9c444cb77ab0bd95a204c5a6de/numpy-2.5.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+numpy-wheel-sha256=3cdec01fa790a186d430433fdd4d4ffb70eed6f0eeb4bf05c8dbe2dce0a9bcb8
+freeze-format=pip-list-freeze-sorted-v1
+kernelbench-verified=3fdf6fec7372a4d0cb682635f00e7bdcbc55d50e

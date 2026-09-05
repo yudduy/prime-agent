@@ -1,0 +1,65 @@
+{
+	"schemaVersion": 1,
+	"analysisId": "compiler-gym-cpu-sealed-v7",
+	"searchTasks": [
+		"benchmark://cbench-v1/blowfish",
+		"benchmark://cbench-v1/bzip2"
+	],
+	"calibrationRun": ".autoresearch/cpu-calibration/2026-08-27-smoke-v1",
+	"runs": [
+		{
+			"id": "m-sealed-v7-control",
+			"path": ".autoresearch/cpu-pilots/control-M-sealed-2026-08-28-v7-pair1",
+			"role": "primary",
+			"contrastId": "M-sealed-v7",
+			"side": "control"
+		},
+		{
+			"id": "m-sealed-v7-treatment",
+			"path": ".autoresearch/cpu-pilots/M-sealed-2026-08-28-v7-pair1",
+			"role": "primary",
+			"contrastId": "M-sealed-v7",
+			"side": "treatment"
+		},
+		{
+			"id": "v7-subscription-endpoint-canary",
+			"path": ".autoresearch/cpu-canaries/control-v7-live-endpoint-2026-08-28-v1",
+			"role": "operational",
+			"contrastId": null,
+			"side": "operational"
+		},
+		{
+			"id": "v6-control-unsupported-output-limit",
+			"path": ".autoresearch/cpu-pilots/control-M-sealed-2026-08-28-v6-pair1",
+			"role": "operational",
+			"contrastId": null,
+			"side": "operational"
+		},
+		{
+			"id": "v6-m-unsupported-output-limit",
+			"path": ".autoresearch/cpu-pilots/M-sealed-2026-08-28-v6-pair1",
+			"role": "operational",
+			"contrastId": null,
+			"side": "operational"
+		}
+	],
+	"contrasts": [
+		{
+			"id": "M-sealed-v7",
+			"feature": "typed branch-local measured-evidence recall after sealed compaction",
+			"role": "primary",
+			"controlRunIds": ["m-sealed-v7-control"],
+			"treatmentRunIds": ["m-sealed-v7-treatment"]
+		}
+	],
+	"transfer": {
+		"task": "benchmark://cbench-v1/dijkstra",
+		"calibrationRun": ".autoresearch/cpu-validation/dijkstra-calibration-v1",
+		"validationRuns": [
+			{
+				"id": "three-pass-sealed-v7-transfer",
+				"path": ".autoresearch/cpu-validation/control-v2"
+			}
+		]
+	}
+}

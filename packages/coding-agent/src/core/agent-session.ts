@@ -92,6 +92,7 @@ import {
 import { type BashResult, executeBashWithOperations } from "./bash-executor.js";
 import {
 	COMPACT_SKILL_NAME,
+	type CompactionProviderOptions,
 	type CompactionResult,
 	calculateContextTokens,
 	collectEntriesForBranchSummary,
@@ -385,6 +386,12 @@ type UserBashEndDetails = {
 };
 
 export class CompactionSkippedError extends Error {}
+
+export interface AgentSessionCompactionOptions {
+	skipAbort?: boolean;
+	providerOptions?: CompactionProviderOptions;
+	onProviderComplete?: (message: AssistantMessage) => void | Promise<void>;
+}
 
 /** Thrown when a session_before_refine extension skips the refinement round. */
 export class RefineSkippedError extends Error {}
@@ -7306,7 +7313,7 @@ export class AgentSession {
 		this.settingsManager.setFollowUpMode(mode);
 	}
 
-	async compact(customInstructions?: string, options: { skipAbort?: boolean } = {}): Promise<CompactionResult> {
+	async compact(customInstructions?: string, options: AgentSessionCompactionOptions = {}): Promise<CompactionResult> {
 		if (options.skipAbort && this.isStreaming) {
 			throw new Error("Cannot compact without aborting while the agent is running.");
 		}
@@ -7338,6 +7345,8 @@ export class AgentSession {
 				headers,
 				customInstructions,
 				signal: this._compactionAbortController.signal,
+				providerOptions: options.providerOptions,
+				onProviderComplete: options.onProviderComplete,
 			});
 
 			this._emit({
@@ -7401,8 +7410,10 @@ export class AgentSession {
 		headers?: Record<string, string>;
 		customInstructions?: string;
 		signal: AbortSignal;
+		providerOptions?: CompactionProviderOptions;
+		onProviderComplete?: (message: AssistantMessage) => void | Promise<void>;
 	}): Promise<CompactionResult> {
-		const { model, apiKey, headers, customInstructions, signal } = options;
+		const { model, apiKey, headers, customInstructions, signal, onProviderComplete } = options;
 		const pathEntries = this.sessionManager.getBranch();
 		const settings = this.settingsManager.getCompactionSettings();
 
@@ -7437,9 +7448,22 @@ export class AgentSession {
 			}
 		}
 
+		const providerRetrySettings = this.settingsManager.getProviderRetrySettings();
+		const providerOptions: CompactionProviderOptions = {
+			transport: this.settingsManager.getTransport(),
+			serviceTier: this.serviceTier,
+			timeoutMs: providerRetrySettings.timeoutMs,
+			maxRetries: providerRetrySettings.maxRetries,
+			maxRetryDelayMs: providerRetrySettings.maxRetryDelayMs,
+			sessionId: this.sessionManager.getSessionId(),
+			...options.providerOptions,
+		};
 		const { summary, firstKeptEntryId, tokensBefore, details } =
 			extensionCompaction ??
-			(await compact(preparation, model, apiKey, headers, customInstructions, signal, this.thinkingLevel));
+			(await compact(preparation, model, apiKey, headers, customInstructions, signal, this.thinkingLevel, {
+				providerOptions,
+				onProviderComplete,
+			}));
 
 		if (signal.aborted) {
 			throw new Error("Compaction cancelled");

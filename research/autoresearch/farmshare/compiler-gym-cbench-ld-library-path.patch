@@ -1,0 +1,22 @@
+--- upstream/compiler_gym/envs/llvm/datasets/cbench.py
++++ farmshare-patched/compiler_gym/envs/llvm/datasets/cbench.py
+@@ -116,6 +116,7 @@
+         "TMPDIR": os.environ.get("TMPDIR", ""),
+         "HOME": os.environ.get("HOME", ""),
+         "USER": os.environ.get("USER", ""),
++        "LD_LIBRARY_PATH": os.environ.get("LD_LIBRARY_PATH", ""),
+         # Disable all logging from GRPC. In the past I have had false-positive
+         # "Wrong output" errors caused by GRPC error messages being logged to
+         # stderr.
+@@ -145,7 +146,10 @@
+                 stdout=subprocess.PIPE,
+                 stderr=subprocess.STDOUT,
+                 universal_newlines=True,
+-                env={"PATH": f"{clang_path.parent}:{os.environ.get('PATH', '')}"},
++                env={
++                    "PATH": f"{clang_path.parent}:{os.environ.get('PATH', '')}",
++                    "LD_LIBRARY_PATH": os.environ.get("LD_LIBRARY_PATH", ""),
++                },
+             ) as clang:
+                 output, _ = clang.communicate(timeout=compilation_timeout_seconds)
+                 if clang.returncode:

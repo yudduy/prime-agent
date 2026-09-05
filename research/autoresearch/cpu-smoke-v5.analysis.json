@@ -1,0 +1,157 @@
+{
+	"schemaVersion": 1,
+	"analysisId": "compiler-gym-cpu-smoke-v5",
+	"searchTasks": [
+		"benchmark://cbench-v1/blowfish",
+		"benchmark://cbench-v1/bzip2"
+	],
+	"calibrationRun": ".autoresearch/cpu-calibration/2026-08-27-smoke-v1",
+	"runs": [
+		{
+			"id": "m-control-pair2",
+			"path": ".autoresearch/cpu-pilots/control-M-2026-08-27-v5-pair2",
+			"role": "primary",
+			"contrastId": "M-pair2",
+			"side": "control"
+		},
+		{
+			"id": "m-treatment-pair2",
+			"path": ".autoresearch/cpu-pilots/M-2026-08-27-v5-pair2",
+			"role": "primary",
+			"contrastId": "M-pair2",
+			"side": "treatment"
+		},
+		{
+			"id": "width-control-pair2",
+			"path": ".autoresearch/cpu-pilots/control-width-2026-08-27-v5-pair2",
+			"role": "primary",
+			"contrastId": "W-pair2",
+			"side": "control"
+		},
+		{
+			"id": "width-treatment-a-pair2",
+			"path": ".autoresearch/cpu-pilots/W-a-2026-08-27-v5-pair2",
+			"role": "primary",
+			"contrastId": "W-pair2",
+			"side": "treatment"
+		},
+		{
+			"id": "width-treatment-b-pair2",
+			"path": ".autoresearch/cpu-pilots/W-b-2026-08-27-v5-pair2",
+			"role": "primary",
+			"contrastId": "W-pair2",
+			"side": "treatment"
+		},
+		{
+			"id": "r-control",
+			"path": ".autoresearch/cpu-pilots/control-R-2026-08-27-v5",
+			"role": "primary",
+			"contrastId": "R-pair",
+			"side": "control"
+		},
+		{
+			"id": "r-treatment",
+			"path": ".autoresearch/cpu-pilots/R-2026-08-27-v5",
+			"role": "primary",
+			"contrastId": "R-pair",
+			"side": "treatment"
+		},
+		{
+			"id": "m-control-pair1",
+			"path": ".autoresearch/cpu-pilots/control-M-2026-08-27-v5",
+			"role": "sensitivity",
+			"contrastId": "M-pair1-sensitivity",
+			"side": "control"
+		},
+		{
+			"id": "m-treatment-pair1",
+			"path": ".autoresearch/cpu-pilots/M-2026-08-27-v5",
+			"role": "sensitivity",
+			"contrastId": "M-pair1-sensitivity",
+			"side": "treatment"
+		},
+		{
+			"id": "width-control-pair1",
+			"path": ".autoresearch/cpu-pilots/control-width-2026-08-27-v5",
+			"role": "sensitivity",
+			"contrastId": "W-pair1-retry-sensitivity",
+			"side": "control"
+		},
+		{
+			"id": "width-treatment-a-pair1",
+			"path": ".autoresearch/cpu-pilots/W-a-2026-08-27-v5",
+			"role": "sensitivity",
+			"contrastId": "W-pair1-retry-sensitivity",
+			"side": "treatment"
+		},
+		{
+			"id": "width-treatment-b-retry",
+			"path": ".autoresearch/cpu-pilots/W-b-2026-08-27-v5-retry",
+			"role": "sensitivity",
+			"contrastId": "W-pair1-retry-sensitivity",
+			"side": "treatment"
+		},
+		{
+			"id": "width-treatment-b-faulted",
+			"path": ".autoresearch/cpu-pilots/W-b-2026-08-27-v5",
+			"role": "operational",
+			"contrastId": null,
+			"side": "operational"
+		}
+	],
+	"contrasts": [
+		{
+			"id": "M-pair2",
+			"feature": "typed branch-local measured-evidence recall",
+			"role": "primary",
+			"controlRunIds": ["m-control-pair2"],
+			"treatmentRunIds": ["m-treatment-pair2"]
+		},
+		{
+			"id": "W-pair2",
+			"feature": "two isolated half-depth trajectories",
+			"role": "primary",
+			"controlRunIds": ["width-control-pair2"],
+			"treatmentRunIds": ["width-treatment-a-pair2", "width-treatment-b-pair2"]
+		},
+		{
+			"id": "R-pair",
+			"feature": "forced final-slot leave-one-out diagnostic",
+			"role": "primary",
+			"controlRunIds": ["r-control"],
+			"treatmentRunIds": ["r-treatment"]
+		},
+		{
+			"id": "M-pair1-sensitivity",
+			"feature": "typed branch-local measured-evidence recall",
+			"role": "sensitivity",
+			"controlRunIds": ["m-control-pair1"],
+			"treatmentRunIds": ["m-treatment-pair1"]
+		},
+		{
+			"id": "W-pair1-retry-sensitivity",
+			"feature": "two isolated half-depth trajectories with retried second branch",
+			"role": "sensitivity",
+			"controlRunIds": ["width-control-pair1"],
+			"treatmentRunIds": ["width-treatment-a-pair1", "width-treatment-b-retry"]
+		}
+	],
+	"transfer": {
+		"task": "benchmark://cbench-v1/dijkstra",
+		"calibrationRun": ".autoresearch/cpu-validation/dijkstra-calibration-v1",
+		"validationRuns": [
+			{
+				"id": "three-pass-control-transfer",
+				"path": ".autoresearch/cpu-validation/control-v2"
+			},
+			{
+				"id": "two-pass-treatment-transfer",
+				"path": ".autoresearch/cpu-validation/M-v2"
+			},
+			{
+				"id": "five-pass-width-control-transfer",
+				"path": ".autoresearch/cpu-validation/control-v5-width-pair2"
+			}
+		]
+	}
+}

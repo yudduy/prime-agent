@@ -1,0 +1,3 @@
+- Fixed ChatGPT Codex Responses requests to omit the unsupported `max_output_tokens` parameter.
+- Fixed pre-request aborts so ChatGPT Codex and faux providers stop before dispatch.
+- Fixed ChatGPT Codex Responses transport to honor configured retry limits.

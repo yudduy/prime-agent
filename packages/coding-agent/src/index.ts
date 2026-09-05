@@ -4,6 +4,7 @@
 export { getAgentDir, VERSION } from "./config.js";
 export {
 	AgentSession,
+	type AgentSessionCompactionOptions,
 	type AgentSessionConfig,
 	type AgentSessionEvent,
 	type AgentSessionEventListener,
@@ -26,6 +27,8 @@ export {
 	type BranchPreparation,
 	type BranchSummaryResult,
 	type CollectEntriesResult,
+	type CompactionExecutionOptions,
+	type CompactionProviderOptions,
 	type CompactionResult,
 	type CutPointResult,
 	calculateContextTokens,

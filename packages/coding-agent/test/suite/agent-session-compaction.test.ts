@@ -1,6 +1,12 @@
 import { appendFileSync } from "node:fs";
 import { AgentContinueError, type AgentMessage, type ShouldStopAfterTurnContext } from "@earendil-works/pi-agent-core";
-import { type AssistantMessage, fauxAssistantMessage, type Model, type ToolResultMessage } from "@earendil-works/pi-ai";
+import {
+	type AssistantMessage,
+	fauxAssistantMessage,
+	type Model,
+	type StreamOptions,
+	type ToolResultMessage,
+} from "@earendil-works/pi-ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionManager } from "../../src/core/session-manager.js";
 import { createHarness, getMessageText, type Harness } from "./harness.js";
@@ -176,6 +182,95 @@ describe("AgentSession compaction characterization", () => {
 			role: "assistant",
 			content: [{ type: "text", text: "still usable" }],
 		});
+	});
+
+	it("inherits controlled provider options and reports each native compaction completion", async () => {
+		const harness = await createHarness({
+			api: "openai-codex-responses",
+			provider: "openai-codex",
+			models: [{ id: "gpt-5.6" }],
+			settings: {
+				transport: "sse",
+				compaction: { keepRecentTokens: 4 },
+				retry: { provider: { timeoutMs: 1_234, maxRetries: 0, maxRetryDelayMs: 0 } },
+			},
+		});
+		harnesses.push(harness);
+		harness.session.setServiceTier("priority");
+		let providerOptions: StreamOptions | undefined;
+		harness.setResponses([
+			fauxAssistantMessage("one response"),
+			fauxAssistantMessage("two response"),
+			(_context, options) => {
+				providerOptions = options;
+				return fauxAssistantMessage("controlled summary");
+			},
+		]);
+		await harness.session.prompt("one");
+		await harness.session.prompt("two");
+
+		const completed: AssistantMessage[] = [];
+		const payloads: unknown[] = [];
+		const responses: Array<{ status: number; headers: Record<string, string> }> = [];
+		const result = await harness.session.compact(undefined, {
+			providerOptions: {
+				onPayload: (payload) => {
+					payloads.push(structuredClone(payload));
+				},
+				onResponse: (response) => {
+					responses.push(structuredClone(response));
+				},
+			},
+			onProviderComplete: (message) => {
+				completed.push(structuredClone(message));
+			},
+		});
+
+		expect(result.summary).toContain("controlled summary");
+		expect(completed).toHaveLength(1);
+		expect(completed[0].usage.totalTokens).toBeGreaterThan(0);
+		expect(payloads).toEqual([{ max_output_tokens: expect.any(Number) }]);
+		expect(responses).toEqual([{ status: 200, headers: {} }]);
+		expect(harness.faux.state.callCount).toBe(3);
+		expect(providerOptions).toMatchObject({
+			transport: "sse",
+			serviceTier: "priority",
+			timeoutMs: 1_234,
+			maxRetries: 0,
+			maxRetryDelayMs: 0,
+			sessionId: harness.sessionManager.getSessionId(),
+		});
+	});
+
+	it("keeps a trailing custom-message boundary without splitting its turn", async () => {
+		const harness = await createHarness({
+			settings: { compaction: { keepRecentTokens: 1 } },
+		});
+		harnesses.push(harness);
+		harness.setResponses([
+			fauxAssistantMessage("one response"),
+			fauxAssistantMessage("two response"),
+			fauxAssistantMessage("single summary"),
+		]);
+		await harness.session.prompt("one");
+		await harness.session.prompt("two");
+		const boundaryId = harness.sessionManager.appendCustomMessageEntry(
+			"host_compaction_boundary",
+			"Continue from this host-owned boundary.",
+			false,
+		);
+
+		const completed: AssistantMessage[] = [];
+		const result = await harness.session.compact(undefined, {
+			onProviderComplete: (message) => {
+				completed.push(structuredClone(message));
+			},
+		});
+
+		expect(result.firstKeptEntryId).toBe(boundaryId);
+		expect(result.summary).toContain("single summary");
+		expect(completed).toHaveLength(1);
+		expect(harness.faux.state.callCount).toBe(3);
 	});
 
 	it("renders an executing /compact as activity instead of queued work", async () => {

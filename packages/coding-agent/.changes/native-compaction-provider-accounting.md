@@ -1,0 +1,1 @@
+- Added controlled provider options and completion accounting callbacks to native session compaction.

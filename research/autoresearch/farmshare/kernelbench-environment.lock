@@ -1,0 +1,7 @@
+schema=prime-kernelbench-environment-v2
+python=3.12.3
+pip=25.2
+torch=2.11.0
+torch-cuda=12.8
+torch-index-url=https://download.pytorch.org/whl/cu128
+kernelbench-verified=3fdf6fec7372a4d0cb682635f00e7bdcbc55d50e

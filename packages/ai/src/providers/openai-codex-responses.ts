@@ -146,6 +146,9 @@ export const streamOpenAICodexResponses: StreamFunction<"openai-codex-responses"
 			if (nextBody !== undefined) {
 				body = nextBody as RequestBody;
 			}
+			if (options?.signal?.aborted) {
+				throw new Error("Request was aborted");
+			}
 			const websocketRequestId = options?.sessionId || createCodexRequestId();
 			const sseHeaders = buildSSEHeaders(model.headers, options?.headers, accountId, apiKey, options?.sessionId);
 			const websocketHeaders = buildWebSocketHeaders(
@@ -213,8 +216,9 @@ export const streamOpenAICodexResponses: StreamFunction<"openai-codex-responses"
 
 			let response: Response | undefined;
 			let lastError: Error | undefined;
+			const maxRetries = Math.max(0, Math.floor(options?.maxRetries ?? MAX_RETRIES));
 
-			for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+			for (let attempt = 0; attempt <= maxRetries; attempt++) {
 				if (options?.signal?.aborted) {
 					throw new Error("Request was aborted");
 				}
@@ -236,7 +240,7 @@ export const streamOpenAICodexResponses: StreamFunction<"openai-codex-responses"
 					}
 
 					const errorText = await response.text();
-					if (attempt < MAX_RETRIES && isRetryableError(response.status, errorText)) {
+					if (attempt < maxRetries && isRetryableError(response.status, errorText)) {
 						const delayMs = BASE_DELAY_MS * 2 ** attempt;
 						await sleep(delayMs, options?.signal);
 						continue;
@@ -255,7 +259,7 @@ export const streamOpenAICodexResponses: StreamFunction<"openai-codex-responses"
 						}
 					}
 					lastError = error instanceof Error ? error : new Error(String(error));
-					if (attempt < MAX_RETRIES && !lastError.message.includes("usage limit")) {
+					if (attempt < maxRetries && !lastError.message.includes("usage limit")) {
 						const delayMs = BASE_DELAY_MS * 2 ** attempt;
 						await sleep(delayMs, options?.signal);
 						continue;

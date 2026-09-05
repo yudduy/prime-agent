@@ -37,6 +37,7 @@ packages/coding-agent/binaries/
 todo.md
 plans/
 .prime/agent/
+.autoresearch/
 collect.sh
 .kernel-venv/
 .worktrees/

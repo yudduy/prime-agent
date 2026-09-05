@@ -4,6 +4,7 @@
 
 export {
 	AgentSession,
+	type AgentSessionCompactionOptions,
 	type AgentSessionConfig,
 	type AgentSessionEvent,
 	type AgentSessionEventListener,
@@ -29,7 +30,7 @@ export {
 	createAgentSessionServices,
 } from "./agent-session-services.js";
 export { type BashExecutorOptions, type BashResult, executeBashWithOperations } from "./bash-executor.js";
-export type { CompactionResult } from "./compaction/index.js";
+export type { CompactionExecutionOptions, CompactionProviderOptions, CompactionResult } from "./compaction/index.js";
 export { createEventBus, type EventBus, type EventBusController } from "./event-bus.js";
 // Extensions system
 export {

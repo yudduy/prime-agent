@@ -1,0 +1,3678 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.10.2" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Prime Agent verifier-separated autoresearch</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="report.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Prime Agent verifier-separated autoresearch</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#prime-agent-verifier-separated-autoresearch"
+id="toc-prime-agent-verifier-separated-autoresearch">Prime Agent
+verifier-separated autoresearch</a>
+<ul>
+<li><a
+href="#cpu-ablations-runtime-integrity-and-gpu-lane-qualification"
+id="toc-cpu-ablations-runtime-integrity-and-gpu-lane-qualification">CPU
+ablations, runtime integrity, and GPU-lane qualification</a></li>
+<li><a href="#executive-decision" id="toc-executive-decision">Executive
+decision</a></li>
+<li><a href="#why-the-benchmark-plan-changed"
+id="toc-why-the-benchmark-plan-changed">Why the benchmark plan
+changed</a></li>
+<li><a href="#system-and-repository-map"
+id="toc-system-and-repository-map">System and repository map</a></li>
+<li><a href="#claim-boundary" id="toc-claim-boundary">Claim
+boundary</a></li>
+<li><a href="#campaign-level-result"
+id="toc-campaign-level-result">Campaign-level result</a></li>
+<li><a href="#goal-completion-matrix"
+id="toc-goal-completion-matrix">Goal completion matrix</a></li>
+<li><a href="#stock-prime-cpu-baseline"
+id="toc-stock-prime-cpu-baseline">Stock Prime CPU baseline</a></li>
+<li><a href="#cpu-ablations" id="toc-cpu-ablations">CPU ablations</a>
+<ul>
+<li><a href="#held-out-cpu-transfer"
+id="toc-held-out-cpu-transfer">Held-out CPU transfer</a></li>
+<li><a href="#why-v5-m-is-not-isolation-grade"
+id="toc-why-v5-m-is-not-isolation-grade">Why v5 <code>M</code> is not
+isolation-grade</a></li>
+<li><a href="#whole-interface-matched-screen"
+id="toc-whole-interface-matched-screen">Whole-interface matched
+screen</a></li>
+<li><a href="#host-owned-terminalization"
+id="toc-host-owned-terminalization">Host-owned terminalization</a></li>
+<li><a href="#concise-feedback-projection"
+id="toc-concise-feedback-projection">Concise feedback
+projection</a></li>
+<li><a href="#killed-before-implementation-per-candidate-task-fusion"
+id="toc-killed-before-implementation-per-candidate-task-fusion">Killed
+before implementation: per-candidate task fusion</a></li>
+<li><a href="#killed-before-implementation-broad-pareto-summary"
+id="toc-killed-before-implementation-broad-pareto-summary">Killed before
+implementation: broad Pareto summary</a></li>
+<li><a
+href="#late-structural-novelty-retrospective-headroom-and-faux-wiring"
+id="toc-late-structural-novelty-retrospective-headroom-and-faux-wiring">Late
+structural novelty: retrospective headroom and faux wiring</a></li>
+<li><a href="#late-novelty-paid-screen-and-farmshare-recovery"
+id="toc-late-novelty-paid-screen-and-farmshare-recovery">Late-novelty
+paid screen and FarmShare recovery</a></li>
+<li><a href="#durable-environment-and-complete-action-space-headroom"
+id="toc-durable-environment-and-complete-action-space-headroom">Durable
+environment and complete-action-space headroom</a></li>
+<li><a href="#paid-first-proposal-action-guide-visibility"
+id="toc-paid-first-proposal-action-guide-visibility">Paid first-proposal
+action-guide visibility</a></li>
+<li><a href="#prospective-blowfish-proxy-cascade-qualification"
+id="toc-prospective-blowfish-proxy-cascade-qualification">Prospective
+blowfish-proxy cascade qualification</a></li>
+<li><a href="#counterbalanced-full-versus-cascade-resource-screen"
+id="toc-counterbalanced-full-versus-cascade-resource-screen">Counterbalanced
+full-versus-cascade resource screen</a></li>
+<li><a href="#paid-proxy-cascade-campaign-and-apparatus-qualification"
+id="toc-paid-proxy-cascade-campaign-and-apparatus-qualification">Paid
+proxy-cascade campaign and apparatus qualification</a></li>
+<li><a href="#warm-allocation-headroom-model"
+id="toc-warm-allocation-headroom-model">Warm-allocation headroom
+model</a></li>
+<li><a href="#warm-transport-result-and-kill"
+id="toc-warm-transport-result-and-kill">Warm transport result and
+kill</a></li>
+<li><a href="#sealed-c1-control-plane-qualification"
+id="toc-sealed-c1-control-plane-qualification">Sealed C1 control-plane
+qualification</a></li>
+<li><a href="#ir-delta-feedback-qualification-and-paid-screen"
+id="toc-ir-delta-feedback-qualification-and-paid-screen">IR-delta
+feedback qualification and paid screen</a></li>
+</ul></li>
+<li><a href="#subscription-transport-tools-rlm-and-compaction"
+id="toc-subscription-transport-tools-rlm-and-compaction">Subscription
+transport, tools, RLM, and compaction</a>
+<ul>
+<li><a href="#paid-endpoint-canary" id="toc-paid-endpoint-canary">Paid
+endpoint canary</a></li>
+<li><a href="#matched-v7-tool-integrity"
+id="toc-matched-v7-tool-integrity">Matched v7 tool integrity</a></li>
+<li><a href="#concise-feedback-host-owned-closure"
+id="toc-concise-feedback-host-owned-closure">Concise-feedback host-owned
+closure</a></li>
+<li><a href="#rlm-and-restart-continuity"
+id="toc-rlm-and-restart-continuity">RLM and restart continuity</a></li>
+</ul></li>
+<li><a href="#deterministic-verified-measurement-reuse"
+id="toc-deterministic-verified-measurement-reuse">Deterministic
+verified-measurement reuse</a></li>
+<li><a href="#gpu-lane-qualification"
+id="toc-gpu-lane-qualification">GPU-lane qualification</a>
+<ul>
+<li><a href="#shared-capacity-and-asynchronous-progress"
+id="toc-shared-capacity-and-asynchronous-progress">Shared capacity and
+asynchronous progress</a></li>
+<li><a href="#kernelbench-verified"
+id="toc-kernelbench-verified">KernelBench-Verified</a></li>
+<li><a href="#nanogpt" id="toc-nanogpt">NanoGPT</a></li>
+</ul></li>
+<li><a href="#why-no-gpu-treatment-run-or-nanogpt-frontier-is-shown"
+id="toc-why-no-gpu-treatment-run-or-nanogpt-frontier-is-shown">Why no
+GPU treatment run or NanoGPT frontier is shown</a></li>
+<li><a href="#figures" id="toc-figures">Figures</a></li>
+<li><a href="#source-audit" id="toc-source-audit">Source audit</a></li>
+<li><a href="#validation-completed"
+id="toc-validation-completed">Validation completed</a></li>
+<li><a href="#threats-to-validity" id="toc-threats-to-validity">Threats
+to validity</a></li>
+<li><a href="#explicitly-unrun-gates"
+id="toc-explicitly-unrun-gates">Explicitly unrun gates</a></li>
+<li><a href="#next-falsifiable-gate" id="toc-next-falsifiable-gate">Next
+falsifiable gate</a></li>
+<li><a href="#reproduction-entry-points"
+id="toc-reproduction-entry-points">Reproduction entry points</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="prime-agent-verifier-separated-autoresearch">Prime Agent
+verifier-separated autoresearch</h1>
+<h2 id="cpu-ablations-runtime-integrity-and-gpu-lane-qualification">CPU
+ablations, runtime integrity, and GPU-lane qualification</h2>
+<p>Decision report v1<br />
+Date: 2026-08-30 UTC<br />
+Prime Agent commit:
+<code>bc0fa7606abb3b7af0f765319518d255e6ae553d</code><br />
+NanoGPT speedrun artifact:
+<code>38e258afefb1ce206dd7595aa71d7740da405742</code></p>
+<h2 id="executive-decision">Executive decision</h2>
+<p>The campaign built and exercised a verifier-separated asynchronous
+research sidecar, but it did <strong>not</strong> show that any tested
+agent-facing Prime Agent harness feature improves research
+performance.</p>
+<p>The contemporaneous native-stock versus typed-interface screen was
+inconclusive across three valid matched pairs: one favored typed, one
+favored stock, and one split by task under the frozen scalar selector. A
+whole-Pareto sensitivity found that a non-selected stock point in the
+mixed pair strictly dominated the typed frontier. This does not
+retroactively change the frozen decision, but it shows why task vectors
+and complete frontiers must remain authoritative.</p>
+<p>The runtime now closes a fixed-budget trajectory in the host after
+four candidates, so assistant <code>CHAMPION</code> prose is advisory
+and no fifth paid response is required. A read-only replay preserved all
+seven historical selections and qualified all 56 verified task
+measurements; the formerly invalid arm remains historically invalid
+rather than being rewritten.</p>
+<p>The first clean host-owned feature ablation tested a concise
+model-visible evaluator projection against full feedback. Concision
+reduced feedback bytes by 86.5%, input tokens by 54.2%, total tokens by
+32.1%, and modeled cost by 20.0%. It nevertheless failed the
+preregistered quality gate: the full-feedback control frontier at
+<code>1,925 / 13,676</code> strictly dominated concise at
+<code>1,962 / 14,103</code>. The treatment is stopped after one
+randomized directional pair; this is a preregistered negative pilot, not
+an estimate of causal harm.</p>
+<p>The earlier strongest isolation-grade memory experiment was sealed
+v7: typed, branch-local measured-evidence recall (<code>M</code>) versus
+control. Both arms produced the same candidate sequence and verified
+task values. <code>M</code> used 15.7% fewer output tokens, but 19.3%
+more total tokens and 19.2% greater modeled cost, with no evaluator-call
+reduction. It failed promotion.</p>
+<p>Earlier exploratory results were also non-promoting. Controlled width
+(<code>W</code>) shortened critical-path time but produced worse
+solutions. The implemented retest/re-ablation treatment (<code>R</code>)
+generated diagnostic evidence without a better champion, and a separate
+frozen 2x2 resurrection gate found zero conditional benefit from the
+candidate component. Sparse sharing (<code>S</code>) was correctly not
+run because its prerequisites were not promising.</p>
+<p>KernelBench-Verified and NanoGPT execution paths were qualified
+independently on FarmShare L40S hardware. NanoGPT now has two distinct
+operational artifacts: historical unscored smoke job
+<code>1701170</code> and production candidate-specific scored-apparatus
+smoke job <code>1703802</code>. Neither is treatment transfer or a
+frontier point. Full stock score-1 job <code>1703804</code> is pending
+and contributes no result. Since no agent-facing treatment passed the
+CPU gate, spending GPU time on treatment transfer or drawing a NanoGPT
+frontier would not be scientifically justified.</p>
+<p>The valid current result is:</p>
+<blockquote>
+<p>No tested agent-facing harness feature beat stock Prime Agent. The
+infrastructure is viable; the present sidecar research interface has not
+yet recovered stock Prime’s descriptive CPU search quality.</p>
+</blockquote>
+<p>A later no-model systems series also rejected persistent warm
+transport as the next speed lever. It preserved every C1–C4 request,
+metric, verifier verdict, lineage edge, and budget field, but took
+<code>194.673 s</code> against <code>124.793 s</code> for the matched
+stock-cold path (<code>1.560x</code>). The preregistered decision is
+<code>keep-stock-cold</code>; no paid warm-transport trajectory is
+justified.</p>
+<p>The replacement systems gate was one sealed, no-model C1
+control-plane-consolidation qualification. After BatchMode
+authentication and preflight passed, the runner submitted its one
+allowed held root and then failed before release or candidate
+publication: FarmShare returned the exact one-node range as
+<code>NumNodes=1-1</code>, while the frozen parser required the raw
+string <code>1</code>. Cleanup-only recovery hit the same assertion.
+Exact manual cancellation then verified the root absent and
+<code>CANCELLED</code> with zero allocated CPUs, elapsed allocation
+time, or CPU time. This post-submit failure is terminal under the
+preregistration: there is no retry, replacement, C1–C4 screen, provider
+call, or GPU use, and candidate-scoped job-step transport is killed.</p>
+<p>The next stock-cold hypothesis exposed a compact per-action
+IR-instruction delta trace. Its no-model qualification passed exact
+metric, verifier, trace, projection, and overhead gates over eight fresh
+allocations. The first paid screen then stopped on a cross-language
+numeric-spelling defect after one valid S12 evaluation. A fresh,
+hash-bound v2 attempt reached two verified candidates: S12 at
+<code>1,970 / 13,838</code>, then an adaptive 25-action candidate at
+<code>1,958 / 13,751</code>. Its third model response proposed 47
+actions and was rejected locally against the frozen <code>1..46</code>
+policy before evaluation. Because treatment randomized first and
+terminated, there is no control arm or trace-effect comparison. The
+result is durable negative policy evidence, not an apparatus retry
+opportunity or a CPU promotion.</p>
+<p>Two later low-cost decision screens did not change that result. A
+broad late-stage Pareto-summary idea failed its model-free headroom gate
+at <code>3/21 = 14.2857%</code>, below the declared 20% minimum, before
+implementation or model/evaluator spend. A development-informed
+structural-novelty reconstruction found a 42.857-point domination-rate
+gap, but weak Fisher sensitivity and strong protocol confounds
+restricted it to a four-call faux wiring check. That check passed exact
+arm isolation and call-four delivery; it is apparatus evidence only, not
+a live or paid treatment result.</p>
+<p>A separately preregistered late-novelty paid screen then produced two
+terminal apparatus outcomes. V1 stopped in pre-provider source-closure
+validation before an attempt lock or paid/evaluator work;
+contemporaneous console output identified a duplicate implementation
+path, but that exception text is not persisted in the one-event ledger.
+Fresh v2 randomized treatment first and made exactly one Luna
+<code>xhigh</code>/priority dispatch. The model returned the exact
+frozen S12 tool request once, but the first evaluator failed before an
+accepted measurement. A later read-only <code>sacct</code> observation
+identified Slurm <code>1703304</code>, <code>FAILED/3:0</code>; that
+scheduler identity is not embedded in the sealed local artifact. The old
+adapter retained only a generic failure and lost the underlying raw
+stdout/stderr. No control, call-four guidance exposure, compaction,
+comparison, or treatment result exists, and the paid attempt lock
+forbids a retry.</p>
+<p>Three zero-model cold diagnostics then separated scheduler health
+from environment integrity. Slurm was scheduling immediately; the first
+job exposed missing Gym sources, the second exposed a compatibility tree
+truncated from 2,749 to 1,247 entries, and the third passed after the
+pinned payloads were restored. Job <code>1703328</code> reproduced
+empty-pass blowfish at <code>3,898</code> IR and <code>16,573</code>
+object-text bytes and passed the frozen environment seal plus all 20
+semantic callbacks; a later read-only <code>sacct</code> observation
+reported <code>COMPLETED/0:0</code>. This restores the CPU apparatus
+operationally; it does not convert the failed paid screen into a
+scientific result.</p>
+<p>Future typed adapter failures now keep model-visible errors sanitized
+while persisting raw stdout/stderr and host-only error evidence as
+content-addressed run-manifest artifacts. That prospective hardening is
+sealed into the implementation inventories and tested, but it cannot
+reconstruct v2’s missing raw bytes.</p>
+<p>Prospective late-novelty runner/preregistration protocol v2 also
+moves the exact frozen environment probe into
+<code>before_provider_request</code>. Every attempted paid transport
+first runs a read-only login-node SSH probe under the pinned
+Python/cache/site/library paths; no <code>srun</code> or
+<code>sbatch</code> is permitted. Ordered host-only records bind pass or
+failure to arm and provider ordinal. A failed probe leaves actual
+provider transport and evaluator counts at zero. This was faux-tested
+only and requires a fresh preregistration; no existing lock, result,
+verifier epoch, or live cluster state changed.</p>
+<p>An additive home-bundle builder was prepared to move the recovered
+payload out of cleanup-prone scratch. Its hash and fail-closed
+regression suite passed 5/5 locally. Contemporaneous remote command
+output, not persisted in a campaign artifact, reported
+<code>EDQUOT</code> while creating the parent before a staging directory
+or path switch existed. The active evaluator therefore still uses the
+recovered scratch tree; no durable migration is claimed.</p>
+<p>A later zero-model screen tested whether the stock prompt’s 26
+visible LLVM flags leave measurable search headroom among all 124 legal
+actions. V1 stopped before its environment probe, attempt lock,
+scheduler query, or allocation because the runner asked the trusted-file
+backend for an overbroad read bound. Its ledger records zero dispatches.
+The exact-byte repair was regression-tested, and the fresh v2 namespace
+made the sole scientific dispatch as Slurm <code>1703490</code>.</p>
+<p>The v2 raw evaluator payload completed the exact 98-flag dijkstra
+sweep. Five flags cleared the raw <code>max(3 instructions, 0.5%)</code>
+prefilter; the declared early-positive schedule then verified
+<code>-early-cse-memssa</code> at <code>292 -&gt; 260</code> IR and
+<code>-early-cse</code> at <code>292 -&gt; 269</code>, each over all 20
+callbacks. The frozen result assessor accepts that payload in isolation.
+The runner nevertheless admitted no result: root and extern accounting
+reported four logical CPUs rather than the preregistered exact two,
+although the actual evaluator step remained one CPU/one task and
+completed <code>0:0</code>. Later read-only diagnosis found that
+<code>--mem=8G</code> exceeded the 4,000 MiB-per-CPU ceiling, raising
+the request to three CPUs and whole-core allocation rounding it to four.
+That scheduler mismatch is orthogonal to the IR and callback
+observations, but it cannot be relaxed post hoc. The 29-event ledger
+ends terminal apparatus-invalid, cleanup proves the job completed and
+left the queue, and the attempt lock forbids a rerun. The raw signal is
+non-admitted exploratory decision evidence, not a passed gate, verified
+frontier point, treatment result, or GPU/NanoGPT authorization.</p>
+<p>That non-admitted signal motivated one genuinely new, separately
+preregistered first-proposal visibility pair. Its shared zero-model S12
+gate first reproduced the frozen two-task metrics exactly: blowfish
+<code>1,970</code> IR and <code>21,501</code> object bytes; bzip2
+<code>13,838</code> IR and <code>166,545</code> object bytes; all 20
+callbacks passed for each task. The pair then made exactly one
+subscription-backed Luna request and one successful tool execution per
+arm. Stock-26 control measured blowfish <code>1,960</code> IR /
+<code>22,380</code> object bytes and bzip2 <code>14,080</code> IR /
+<code>172,685</code> bytes. Full-124 treatment uniquely used 19 flags
+omitted from the control guide but measured blowfish <code>1,971</code>
+IR / <code>23,040</code> bytes and bzip2 <code>14,268</code> IR /
+<code>181,907</code> bytes. Control was strictly better on both
+authoritative IR tasks, so the frozen decision is
+<code>directional-loss</code> and the screen stops.</p>
+<p>The complete run used six unique FarmShare CPU allocations: shared
+S12 jobs <code>1703515</code> and <code>1703516</code>, control jobs
+<code>1703519</code> and <code>1703520</code>, and treatment jobs
+<code>1703521</code> and <code>1703522</code>. Both arms recorded
+exactly one real provider dispatch, one tool call and execution, and one
+locally blocked <code>provider-call-limit</code> continuation whose
+durable assistant record has exactly zero usage. The requests used
+<code>openai-codex/gpt-5.6-luna</code>, <code>xhigh</code>, with locally
+requested <code>priority</code>; the upstream response did not
+acknowledge a service tier. The order was sampled locally as control
+then treatment, but there was no external precommitment or
+tamper-evident assignment. The result therefore explicitly sets
+randomized inference, causal claims, default promotion, GPU promotion,
+and NanoGPT promotion to false.</p>
+<p>A later model-free systems qualification exercised a blowfish-first
+proxy cascade through production-default code with no dependency
+injection. It made eight fresh one-task CPU allocations: four blowfish
+measurements, bzip2 measurements for selected candidates 2 and 3, and
+hidden audit-only bzip2 measurements for omitted candidates 1 and 4. The
+complete frontier remained <code>[3]</code> and champion 3 was retained.
+All 24 root/extern/step Slurm rows were <code>COMPLETED/0:0</code>, the
+terminal queue was empty, and there were zero failures, retries,
+replacements, reused measurements, models, providers, RLM children, or
+GPUs. This qualifies live wiring only. The actual audit ran all eight
+allocations; six versus eight is a counterfactual 25% allocation-count
+reduction, not an observed compute, time, latency, agent, default, GPU,
+or NanoGPT improvement.</p>
+<p>A distinct, separately preregistered resource screen then made the
+six-versus-eight schedule prospective and order-balanced. Block 1 ran
+full control then cascade, measuring <code>84.477934 s / 198</code>
+evaluator-step CPU-seconds versus <code>54.664385 s / 136</code>; block
+2 reversed the order, measuring cascade <code>52.682669 s / 126</code>
+versus control <code>82.121875 s / 188</code>. Median cascade/control
+wall ratio was <code>0.6443014367</code>, median absolute saving was
+<code>29.6263775 s</code>, and median evaluator-step CPU ratio was
+<code>0.6785407264</code>. All four arms reproduced the exact metrics,
+verifier results, frontier <code>[3]</code>, and champion 3; both
+cascade arms selected candidates <code>[2, 3]</code> from their own
+fresh blowfish measurements. The 28 fresh unique CPU allocations
+produced 84 exact terminal accounting rows with maximum evaluator
+concurrency two and no failure, retry, replacement, reuse, model,
+provider, tool, RLM, compaction, or GPU work. This passed the model-free
+resource-feasibility gate and qualified one separately preregistered
+paid directional campaign. That follow-up was attempted and closed
+apparatus-invalid. The model-free result is not evidence of an
+agent-performance effect, default improvement, GPU transfer, or NanoGPT
+progress.</p>
+<p>That paid proxy-cascade campaign was attempted twice and is now
+closed without an admissible comparison. V1 exposed a provider-response
+guard defect and terminated apparatus-invalid. Fresh v2 completed both
+online arms with eight subscription-backed Luna transports, eight tool
+calls, and 14 durable online measurements, then failed while admitting
+the two post-terminal hidden treatment audits. Read-only Slurm
+accounting shows that all 16 physical allocations and their evaluator
+<code>.0</code> steps completed <code>0:0</code>; for hidden jobs
+<code>1703771</code> and <code>1703772</code>, only the
+<code>.extern</code> containment step ended one second after the root
+row. The frozen host adapter incorrectly applied evaluator-step temporal
+containment to <code>.extern</code>. V2 therefore remains
+<code>assessment=null</code> and
+<code>liveScientificEvidenceEligible=false</code>; its online
+measurements are apparatus diagnostics only, not a directional result,
+frontier, resource-quality finding, replication, or promotion signal.
+The preregistered second-apparatus-failure rule forbids v3.</p>
+<p>The prospective apparatus now treats <code>.extern</code> according
+to its cleanup role while preserving exact row shape, node, terminal
+state, timestamps, per-row bounds, and strict root containment for the
+evaluator <code>.0</code> step. It records each Slurm ID immediately and
+durably preserves running/failed states, raw streams, host evidence,
+ordered aggregate children, and failure-path session-integrity seals. A
+fresh zero-model qualification exercised the exact concurrent
+hidden-audit path: jobs <code>1703787</code> and <code>1703788</code>
+overlapped, both exact root/extern/step triples completed
+<code>0:0</code>, and both passed all 20 semantic callbacks. This
+validates only the repaired apparatus; it does not rescue v1/v2 or
+authorize another paid trajectory.</p>
+<h2 id="why-the-benchmark-plan-changed">Why the benchmark plan
+changed</h2>
+<p>FarmShare is suitable for queued overnight validation but not as a
+guaranteed synchronous propose-measure-update loop. In a live snapshot
+at <code>2026-08-28 20:47–20:50 PDT</code>, 13 of 24 L40S devices were
+physically unallocated, yet <code>srun --test-only</code> predicted an
+approximately eight-hour wait for either one or four GPUs. A small CPU
+request was immediately schedulable. The active GPU QoS allowed four
+jobs and four GPUs. Physical idleness and scheduler availability are
+therefore different quantities; this time-stamped observation may drift
+and is not an immutable campaign artifact.</p>
+<p>In a later CPU recovery snapshot at
+<code>2026-08-29 17:11–17:27 PDT</code>, three diagnostic allocations
+started promptly on <code>barley-01</code>; the final one completed in
+ten seconds and the user queue was empty. At <code>17:43 PDT</code>, a
+separate one-L40S ten-minute <code>srun --test-only</code> projected
+start at <code>2026-08-31 15:55 PDT</code>, roughly 46 hours later; no
+GPU job was submitted. CPU recovery therefore does not make the GPU lane
+synchronous. The CPU failures were inside the extracted CompilerGym
+filesystem, not Slurm admission. Old upstream mtimes and the deletion
+pattern make nightly scratch cleanup the leading explanation, but that
+cause is inferred rather than directly observed.</p>
+<p>The campaign uses three lanes as a gated funnel, not as
+interchangeable substitutes:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Lane</th>
+<th>Hardware</th>
+<th>Decision role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CompilerGym/cBench</td>
+<td>FarmShare CPU, locally orchestrated</td>
+<td>Fast surrogate screen for harness ablations and CPU promotion
+gates</td>
+</tr>
+<tr>
+<td>KernelBench-Verified</td>
+<td>Queued one-GPU L40S jobs</td>
+<td>Optional verifier and GPU-transfer stress after a CPU promotion</td>
+</tr>
+<tr>
+<td>NanoGPT Track 3</td>
+<td>Queued one-GPU L40S jobs</td>
+<td>Direct confirmatory estimand and final expensive validation</td>
+</tr>
+</tbody>
+</table>
+<p>The controller can continue CPU search while GPU measurements are
+pending, then append delayed results to the same evidence model. It now
+limits KernelBench plus NanoGPT to four aggregate in-process jobs,
+matching the current one-GPU-per-job QoS design, while leaving CPU
+progress independent. A faux regression validates the cap and exact-once
+delayed merge; Slurm remains authoritative across other controller
+processes. Queue time remains a reported resource rather than
+disappearing from the experiment.</p>
+<p>The original 24-hour NanoGPT stock trajectory was not run. The
+benchmark pivot added a stock Prime CPU smoke baseline for fast
+iteration; it did not replace NanoGPT as the target benchmark. A
+production scored adapter, verifier, SSH/Slurm transport, remote worker,
+full 3,290-step stock recipe, and staged stock driver now exist.
+Candidate-specific smoke job <code>1703802</code> passed; full score-1
+job <code>1703804</code> is pending and is not yet evidence. No
+treatment run or eight-seed replay has completed.</p>
+<h2 id="system-and-repository-map">System and repository map</h2>
+<p>Prime Agent is the inner runtime, not the experiment authority.</p>
+<pre class="text"><code>model subscription
+      |
+      v
+packages/ai             provider transport, model/tool event normalization
+      |
+      v
+packages/agent          stateful turn and tool-execution loop
+      |
+      v
+packages/coding-agent   sessions, Python kernel, RLM children, compaction,
+                        extensions, goals, daemon continuity, TUI integration
+      |
+      +------&gt; packages/tui  terminal rendering and input primitives
+      |
+      v
+research/autoresearch   opt-in verifier-separated sidecar
+      |
+      +------&gt; append-only hash-linked ledger + content-addressed artifacts
+      +------&gt; typed submit/status/recall/compare boundary
+      +------&gt; budgeted controller and deterministic CPU reuse contract
+      +------&gt; CompilerGym CPU / KernelBench GPU / NanoGPT GPU adapters</code></pre>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Area</th>
+<th>Existing responsibility</th>
+<th>Campaign use or change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../../../packages/ai"><code>packages/ai</code></a></td>
+<td>Provider registry, normalized streams, tools, usage, and model
+handoff</td>
+<td>Live ChatGPT subscription transport; pre-dispatch abort and exact
+retry control; omit unsupported Codex
+<code>max_output_tokens</code>.</td>
+</tr>
+<tr>
+<td><a
+href="../../../packages/agent"><code>packages/agent</code></a></td>
+<td>Stateful model/tool loop and event stream</td>
+<td>Unmodified inner turn runtime.</td>
+</tr>
+<tr>
+<td><a
+href="../../../packages/coding-agent"><code>packages/coding-agent</code></a></td>
+<td>Durable JSONL sessions, persistent Python, RLM, compaction, SDK,
+daemon recovery, extensions</td>
+<td>Stock baseline and live integrity canaries; a faux-provider
+regression verifies continuation abort before a paid dispatch.</td>
+</tr>
+<tr>
+<td><a href="../../../packages/tui"><code>packages/tui</code></a></td>
+<td>Differential terminal rendering and interactive components</td>
+<td>No experiment-authority role and no campaign change.</td>
+</tr>
+<tr>
+<td><a href=".."><code>research/autoresearch</code></a></td>
+<td>New private sidecar</td>
+<td>Frozen campaign schema, strict canonical ledger verification,
+host-owned terminalization, Pareto comparison, typed operations,
+adapters, analyzers, tests, reports, and the production NanoGPT scored
+protocol/adapter/transport/worker/stock driver.</td>
+</tr>
+</tbody>
+</table>
+<p>The sidecar deliberately does not change default Prime behavior or
+the daemon protocol. The agent proposes candidate material; it cannot
+write accepted metrics, verifier configuration, evaluator jobs, or prior
+evidence. The controller is the single writer for an append-only
+hash-linked JSONL ledger and stores referenced bytes by content
+digest.</p>
+<p>The main contracts are in <a
+href="../src/types.ts"><code>types.ts</code></a>, controller and budget
+enforcement in <a
+href="../src/controller.ts"><code>controller.ts</code></a>, ledger
+integrity in <a href="../src/ledger.ts"><code>ledger.ts</code></a>,
+content-addressed storage in <a
+href="../src/artifact-store.ts"><code>artifact-store.ts</code></a>,
+typed operations in <a href="../src/tools.ts"><code>tools.ts</code></a>,
+and the frozen campaign declaration in <a
+href="../src/campaign.ts"><code>campaign.ts</code></a>. The production
+NanoGPT path is split across the prospective <a
+href="../src/nanogpt-scored-amendment.ts"><code>nanogpt-scored-amendment.ts</code></a>,
+<a
+href="../src/nanogpt-scored-protocol.ts"><code>nanogpt-scored-protocol.ts</code></a>,
+<a
+href="../src/nanogpt-scored-adapter.ts"><code>nanogpt-scored-adapter.ts</code></a>,
+<a
+href="../src/nanogpt-scored-transport.ts"><code>nanogpt-scored-transport.ts</code></a>,
+<a
+href="../src/nanogpt-scored-stock.ts"><code>nanogpt-scored-stock.ts</code></a>,
+and remote <a
+href="../evaluators/nanogpt_scored_worker.py"><code>nanogpt_scored_worker.py</code></a>.</p>
+<h2 id="claim-boundary">Claim boundary</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Evidence class</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Verified measurement</td>
+<td>The frozen verifier accepted the measurement and the ledger/artifact
+integrity path was checked.</td>
+</tr>
+<tr>
+<td>Verified operational</td>
+<td>A runtime mechanism worked; no research-performance claim
+follows.</td>
+</tr>
+<tr>
+<td>Descriptive</td>
+<td>A valid measurement exists without a matched causal comparison.</td>
+</tr>
+<tr>
+<td>Non-admitted observation</td>
+<td>Raw sealed bytes pass a scientific parser or verifier, but the
+native attempt failed another frozen admission contract. The observation
+may guide a new hypothesis but cannot become a result or frontier
+point.</td>
+</tr>
+<tr>
+<td>Negative</td>
+<td>A declared mechanism or promotion gate was missed.</td>
+</tr>
+<tr>
+<td>Unrun</td>
+<td>No eligible measurement exists; no claim is made.</td>
+</tr>
+</tbody>
+</table>
+<p>The v5 and v7 analyzers verify each source ledger’s hash chain and
+re-read candidate, stdout, and stderr artifacts from the
+content-addressed store. They do not treat convenience
+<code>result.json</code> files as authoritative evidence.</p>
+<h2 id="campaign-level-result">Campaign-level result</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Question</th>
+<th>Status</th>
+<th>Finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Does the paid Luna subscription path work?</td>
+<td>Verified operational</td>
+<td>Live <code>openai-codex/gpt-5.6-luna</code>, <code>xhigh</code>
+calls completed over SSE with locally requested <code>priority</code>.
+The upstream response did not acknowledge service tier.</td>
+</tr>
+<tr>
+<td>Are typed tools durable and deduplicated?</td>
+<td>Verified operational</td>
+<td>Submit, status, and recall succeeded; durable restart produced zero
+redispatch; an exact duplicate submission was recognized.</td>
+</tr>
+<tr>
+<td>Does evidence survive compaction without leaking into the
+control?</td>
+<td>Verified operational in sealed v7</td>
+<td>Both arms used the same evidence-free sealed summary. The treatment
+recovered branch-local measurement evidence only through typed
+recall.</td>
+</tr>
+<tr>
+<td>Does <code>M</code> improve research?</td>
+<td>Negative</td>
+<td>Exact quality and evaluator-call tie; higher total tokens and
+modeled cost.</td>
+</tr>
+<tr>
+<td>Does <code>W</code> improve research?</td>
+<td>Negative exploratory</td>
+<td>Lower critical-path time, worse verified quality on both search
+tasks.</td>
+</tr>
+<tr>
+<td>Does <code>R</code> improve research?</td>
+<td>Negative exploratory</td>
+<td>Diagnostic information only; no better champion; independent
+resurrection gate failed.</td>
+</tr>
+<tr>
+<td>Does the typed whole interface preserve native-stock quality?</td>
+<td>Inconclusive directional screen</td>
+<td>Three valid pairs split typed-positive, stock-positive, and
+task-wise mixed; the V4 whole-Pareto sensitivity favored stock.</td>
+</tr>
+<tr>
+<td>Can fixed-budget trajectories close without a fifth model call?</td>
+<td>Verified operational</td>
+<td>Host-owned selection preserved all historical selections; new live
+arms used exactly four provider calls and one intentional host
+stop.</td>
+</tr>
+<tr>
+<td>Does concise measured feedback preserve research quality?</td>
+<td>Negative directional screen</td>
+<td>The compression and integrity gates passed, but full feedback
+strictly covered concise on the complete two-task frontier.</td>
+</tr>
+<tr>
+<td>Does persistent warm transport beat stock cold execution?</td>
+<td>Negative matched systems gate</td>
+<td>Exact semantic and accounting parity; warm <code>194.673 s</code>
+versus cold <code>124.793 s</code>. Keep stock cold.</td>
+</tr>
+<tr>
+<td>Does candidate-scoped control-plane consolidation pass C1?</td>
+<td>Terminal infrastructure negative</td>
+<td>One held root was submitted exactly once, but strict
+<code>NumNodes</code> representation parsing failed before release or
+candidate publication. Native recovery failed on the same assertion;
+exact manual cleanup verified cancellation and zero allocation. The
+preregistered transport kill fired.</td>
+</tr>
+<tr>
+<td>Is per-action IR-delta feedback measurement-safe and cheap enough to
+expose?</td>
+<td>Verified operational</td>
+<td>Eight fresh allocations preserved exact terminal metrics and 20/20
+verifier callbacks; median treatment/control runtime ratio was
+<code>0.996886</code>, maximum <code>1.021607</code>, and the added
+projection was 2,039 bytes.</td>
+</tr>
+<tr>
+<td>Does visible IR-delta feedback improve Luna search?</td>
+<td>Unresolved; terminal screen evidence</td>
+<td>V1 was apparatus-invalid before adaptive feedback. V2 produced two
+verified treatment candidates, then violated the frozen 46-action cap.
+No control arm ran, so no treatment-effect claim or promotion is
+allowed.</td>
+</tr>
+<tr>
+<td>Does broad late-stage Pareto-summary injection have enough
+headroom?</td>
+<td>Negative model-free screen</td>
+<td>Only <code>3/21 = 14.2857%</code> of the development cases met the
+proposed opportunity condition, below the declared 20% gate. It was
+killed before implementation, evaluator work, or model calls.</td>
+</tr>
+<tr>
+<td>Does lower ordinal-four structural similarity predict
+improvement?</td>
+<td>Retrospective, faux-only</td>
+<td>Low Dice-LCS transitions dominated in 5/7 cases versus 2/7
+high-similarity cases, but Fisher sensitivity was weak and
+protocol/selection confounds preclude a treatment claim. Only four-call
+faux wiring was authorized and tested.</td>
+</tr>
+<tr>
+<td>Does late-novelty guidance improve Luna search?</td>
+<td>Unresolved; terminal apparatus screen</td>
+<td>V1 stopped pre-provider. V2 made one exact paid S12 tool round trip,
+then its first treatment evaluation failed before an accepted
+measurement; later diagnostics found the FarmShare environment damaged.
+No accepted measurement, guidance exposure, control arm, or comparison
+exists.</td>
+</tr>
+<tr>
+<td>Is the current CompilerGym CPU evaluator healthy?</td>
+<td>Verified operational at one zero-model smoke</td>
+<td>After two diagnostic failures and pinned-payload restoration, Slurm
+<code>1703328</code> passed the frozen operational environment seal,
+empty-pass blowfish measurement, and all 20 callbacks. This is not a
+research baseline.</td>
+</tr>
+<tr>
+<td>Are raw evaluator failures durable without model leakage?</td>
+<td>Verified prospectively in tests</td>
+<td>Typed adapter failures expose a sanitized message to the model while
+the controller stores host-only error evidence and raw streams by
+digest. The behavior was added after late-novelty v2 and cannot recover
+its missing streams.</td>
+</tr>
+<tr>
+<td>Can an environment failing the frozen live seal spend a future paid
+call?</td>
+<td>Prevented prospectively in faux</td>
+<td>Runner/preregistration v2 records a sealed read-only FarmShare probe
+before each provider transport. The failure regression leaves actual
+faux transport, provider counters, downstream guard, and evaluator calls
+at zero; unprobed or transient evaluator failures remain possible.</td>
+</tr>
+<tr>
+<td>Do legal actions omitted from the stock 26-flag guide have
+measurable headroom?</td>
+<td>Terminal apparatus screen with non-admitted signal</td>
+<td>The sole v2 job swept all 98 omitted flags and its raw payload found
+two distinct 20/20-verified dijkstra improvements. Root accounting was
+four logical CPUs instead of the frozen exact two, so the runner
+admitted no result and the attempt cannot be repeated or promoted.</td>
+</tr>
+<tr>
+<td>Does showing all 124 legal flags improve Luna’s first verified
+proposal?</td>
+<td>Negative directional screen</td>
+<td>The shared S12 apparatus gate passed. Control produced
+<code>1,960 / 14,080</code>; treatment used 19 uniquely guide-omitted
+flags but produced <code>1,971 / 14,268</code>, so control strictly
+dominated. The preregistered decision is <code>directional-loss</code>;
+no randomized/causal/default/GPU/NanoGPT claim is allowed.</td>
+</tr>
+<tr>
+<td>Does the blowfish-first proxy cascade execute correctly under
+production defaults?</td>
+<td>Verified operational, model-free only</td>
+<td>Eight fresh unique CPU allocations completed as 4 blowfish +
+selected 2/3 bzip2 + hidden omitted 1/4 bzip2 audit. Frontier
+<code>[3]</code> and champion 3 were retained. This validates wiring and
+exact accounting only; the 25% figure is counterfactual allocation
+count, not an observed resource, latency, agent, default, GPU, or
+NanoGPT improvement.</td>
+</tr>
+<tr>
+<td>Does the proxy cascade reduce prospective fixed-batch CPU resource
+and feedback-ready wall cost?</td>
+<td>Positive model-free counterbalanced systems screen</td>
+<td>Two AB/BA blocks retained exact metrics, verifiers, frontier
+<code>[3]</code>, and champion 3. Median cascade/control wall ratio was
+<code>0.6443014367</code>, median saving <code>29.6263775 s</code>, and
+median evaluator-step CPU ratio <code>0.6785407264</code>. Its one paid
+follow-up was attempted and closed without an admissible comparison; no
+agent/default/GPU/NanoGPT claim follows.</td>
+</tr>
+<tr>
+<td>Does the proxy cascade improve Luna search under the paid
+directional protocol?</td>
+<td>Unresolved; campaign terminal apparatus-invalid</td>
+<td>V1 failed its provider-response guard. V2 completed both online arms
+but failed admission of both required hidden audits because
+<code>.extern</code> outlived root by one second.
+<code>assessment</code> is null, scientific eligibility is false, and
+the second-apparatus-failure stop closes the campaign. The 14 online
+measurements are diagnostics only.</td>
+</tr>
+<tr>
+<td>Is the repaired concurrent hidden-audit path operational?</td>
+<td>Verified operational, zero-model only</td>
+<td>Fresh overlapping Slurm jobs <code>1703787</code> and
+<code>1703788</code> passed exact root/extern/step accounting and 20/20
+semantic callbacks with zero model, provider, or agent-session calls.
+This is not scientific treatment evidence or paid-dispatch
+authorization.</td>
+</tr>
+<tr>
+<td>Is aggregate GPU-lane capacity bounded?</td>
+<td>Verified operational in faux</td>
+<td>Three KernelBench jobs plus one NanoGPT job occupied the four-job
+cap, a fifth GPU job waited while CPU completed, and the fifth ran and
+merged once after release. No live combined-lane campaign ran.</td>
+</tr>
+<tr>
+<td>Is KernelBench GPU evaluation ready?</td>
+<td>Verified operational</td>
+<td>Positive candidate passed four hidden configurations; wrong-output
+candidate was rejected on all four.</td>
+</tr>
+<tr>
+<td>Is NanoGPT L40S execution ready?</td>
+<td>Verified operational under the production scored verifier</td>
+<td>Candidate-specific <code>smoke-10</code> job <code>1703802</code>
+completed <code>COMPLETED/0:0</code>, passed exact source, scheduler,
+hardware, count, and archived-log verification, and reconciled without
+redispatch. It remains unscored, frontier-ineligible, and
+record-ineligible. Historical job <code>1701170</code> remains separate
+unscored infrastructure evidence.</td>
+</tr>
+<tr>
+<td>Did a treatment transfer to GPU?</td>
+<td>Unrun by gate</td>
+<td>No CPU treatment qualified.</td>
+</tr>
+<tr>
+<td>Is there a scored NanoGPT frontier?</td>
+<td>No; score-1 pending</td>
+<td>Job <code>1703804</code> has no accepted result yet. There are zero
+record-eligible points and no treatment or eight-seed replay.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="goal-completion-matrix">Goal completion matrix</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Campaign requirement</th>
+<th>Status</th>
+<th>Boundary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unmodified Prime/Luna baseline</td>
+<td>Partial</td>
+<td>A 173-second, four-candidate stock CPU smoke and the production
+candidate-specific NanoGPT scored-apparatus smoke are verified. The
+planned 24-hour NanoGPT trajectory is unrun, and full score-1 job
+<code>1703804</code> remains pending/non-evidence.</td>
+</tr>
+<tr>
+<td>Fast CompilerGym ablations</td>
+<td>Verified negative or terminal at smoke stage, with one positive
+model-free resource screen</td>
+<td><code>M</code>, <code>W</code>, <code>R</code>, concise feedback,
+task fusion, broad Pareto summary, and warm transport did not promote;
+<code>S</code> was correctly gated off. C1 failed terminally before
+measurement. IR-delta observation qualified operationally, but its paid
+treatment arm terminated on policy before control. Late novelty reached
+one live paid tool call but terminated on evaluator apparatus before an
+accepted measurement or control. The complete-action-space screen
+produced a non-admitted raw headroom signal; its separately
+preregistered visibility pair completed and returned a directional loss.
+The proxy cascade passed a two-block model-free resource gate; its paid
+campaign was then attempted twice and closed apparatus-invalid without a
+scientific comparison. No causal confirmation stage ran.</td>
+</tr>
+<tr>
+<td>Verifier-separated evidence controller</td>
+<td>Verified operational</td>
+<td>Typed submit/status/recall/compare, immutable measurement append,
+deduplication, restart, and compaction recall are exercised.</td>
+</tr>
+<tr>
+<td>CPU work while GPU evidence is pending</td>
+<td>Faux-verified shared-capacity primitive</td>
+<td>The controller caps aggregate GPU-lane work at four, holds a fifth
+GPU job, completes CompilerGym independently, then admits and merges the
+delayed job exactly once after a permit releases. No real combined-lane
+campaign run exists.</td>
+</tr>
+<tr>
+<td>KernelBench transfer subset</td>
+<td>Unrun</td>
+<td>One fixed-candidate L40S verifier qualification is not a 20–50-task
+treatment transfer.</td>
+</tr>
+<tr>
+<td>NanoGPT confirmation</td>
+<td>Apparatus verified; score pending</td>
+<td>Historical unscored job <code>1701170</code> and production
+candidate-specific scored-apparatus job <code>1703802</code> are
+complete. Full stock score-1 job <code>1703804</code> is pending; no
+threshold result, score-3 widening, treatment, or eight-seed replay
+exists.</td>
+</tr>
+<tr>
+<td>Frontier deliverables</td>
+<td>Partial</td>
+<td>Reproducible task-local CPU CSV/SVG frontiers exist. NanoGPT time,
+token, evaluator-call, and GPU-hour frontiers have no eligible
+points.</td>
+</tr>
+<tr>
+<td>Rigorous report bundle</td>
+<td>Deterministic final gate</td>
+<td>Markdown/HTML synchronization and local citation hashing are
+enforced by the campaign bundle verifier after every Markdown change;
+bundle currency is established by the generator/check result, not by
+this narrative.</td>
+</tr>
+</tbody>
+</table>
+<p>Operational proofs: <a
+href="../test/multi-lane-controller.test.ts">multi-lane controller
+regression</a>, <a href="../src/campaign-report-bundle.ts">campaign
+bundle verifier</a>, and <a
+href="../test/campaign-report-bundle.test.ts">bundle tamper
+regression</a>.</p>
+<h2 id="stock-prime-cpu-baseline">Stock Prime CPU baseline</h2>
+<p>The stock-core smoke used the pinned Prime commit, native
+<code>ipython</code>, no autoresearch tools, and disabled extensions,
+skills, goals, templates, themes, and context files. Source and Prime
+core integrity remained stable.</p>
+<table>
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr>
+<th>Field</th>
+<th style="text-align: right;">Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model</td>
+<td style="text-align: right;"><code>openai-codex/gpt-5.6-luna</code>,
+<code>xhigh</code>, locally requested <code>priority</code></td>
+</tr>
+<tr>
+<td>Candidate evaluations</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td>Logical task evaluations</td>
+<td style="text-align: right;">8</td>
+</tr>
+<tr>
+<td>Champion digest</td>
+<td style="text-align: right;"><code>03eba60a7f28...</code></td>
+</tr>
+<tr>
+<td>Blowfish</td>
+<td style="text-align: right;">1,937 IR, 49.69% of empty-pass
+calibration</td>
+</tr>
+<tr>
+<td>Bzip2</td>
+<td style="text-align: right;">13,706 IR, 47.68% of empty-pass
+calibration</td>
+</tr>
+<tr>
+<td>Output / total tokens</td>
+<td style="text-align: right;">4,948 / 47,435</td>
+</tr>
+<tr>
+<td>Modeled cost</td>
+<td style="text-align: right;">0.108408</td>
+</tr>
+<tr>
+<td>Calendar time</td>
+<td style="text-align: right;">172.995 s</td>
+</tr>
+<tr>
+<td>Source integrity</td>
+<td style="text-align: right;">Passed</td>
+</tr>
+</tbody>
+</table>
+<p>Evidence: <a
+href="../../../.autoresearch/stock-cpu-baseline/2026-08-28-v3-v2-sealed/result.json">stock
+result</a> and <a
+href="../../../.autoresearch/stock-cpu-baseline/2026-08-28-v3-v2-sealed/evaluation/evidence.jsonl">stock
+evaluation ledger</a>.</p>
+<p>This champion strictly dominates the sealed v7 champion on the
+declared IR objective. That is descriptive evidence that the sidecar
+protocol has not surpassed stock Prime; it is not proof that the sidecar
+harms performance. The prompt, action guide, tool interface, and
+evaluation depth differ.</p>
+<h2 id="cpu-ablations">CPU ablations</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Evidence grade</th>
+<th>Control to treatment quality</th>
+<th>Resource effect</th>
+<th>Decision</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>M</code>, sealed typed recall</td>
+<td>Isolation-grade smoke, one matched pair</td>
+<td>Blowfish 2,091 to 2,091; bzip2 16,559 to 16,559</td>
+<td>6 to 6 task evals; output -15.7%; total tokens +19.3%; cost
++19.2%</td>
+<td>Do not promote</td>
+</tr>
+<tr>
+<td><code>W</code>, two half-depth branches</td>
+<td>Exploratory v5 smoke</td>
+<td>Blowfish 2,047 to 2,161; bzip2 14,893 to 17,665</td>
+<td>8 to 8 task evals; output -46.0%; critical path -61.2%</td>
+<td>Quality-for-time tradeoff; do not promote</td>
+</tr>
+<tr>
+<td><code>R</code>, forced leave-one-out</td>
+<td>Exploratory v5 smoke</td>
+<td>2,091/16,559 to the same result</td>
+<td>8 to 8 task evals; output +9.0%; wall +6.5%</td>
+<td>Mechanistic only; do not promote</td>
+</tr>
+<tr>
+<td><code>R</code> resurrection 2x2</td>
+<td>Frozen evaluator-only qualification</td>
+<td><code>X</code> changed neither task before or after
+<code>E</code></td>
+<td>4 submissions, 8 task evals</td>
+<td>Gate failed</td>
+</tr>
+<tr>
+<td><code>S</code>, sparse sharing</td>
+<td>No experiment</td>
+<td>Unrun</td>
+<td>Unrun</td>
+<td>Correctly gated off</td>
+</tr>
+<tr>
+<td>Native stock vs typed interface</td>
+<td>Three valid matched directional pairs</td>
+<td>Typed positive, stock positive, then task-wise mixed</td>
+<td>56 fresh task measurements across seven attempted arms</td>
+<td>Inconclusive; no promotion</td>
+</tr>
+<tr>
+<td>Concise evaluator feedback</td>
+<td>One randomized typed-vs-typed pair</td>
+<td>Full <code>1,925/13,676</code>; concise
+<code>1,962/14,103</code></td>
+<td>Feedback -86.5%; total tokens -32.1%; cost -20.0%</td>
+<td>Quality kill; do not replicate</td>
+</tr>
+<tr>
+<td>Visible per-action IR deltas</td>
+<td>Model-free qualification plus two terminal paid attempts</td>
+<td>V2 treatment: S12 <code>1,970/13,838</code>, adaptive
+<code>1,958/13,751</code>; no control</td>
+<td>3 paid dispatches and 4 fresh tasks in v2; third proposal rejected
+at 47 actions</td>
+<td>No pair result; do not promote or retry</td>
+</tr>
+<tr>
+<td>Broad Pareto summary</td>
+<td>Unpersisted model-free development screen</td>
+<td>Opportunity condition in <code>3/21 = 14.2857%</code> cases</td>
+<td>No implementation, evaluator, provider, or GPU work</td>
+<td>Failed 20% headroom gate</td>
+</tr>
+<tr>
+<td>Late structural novelty</td>
+<td>Development-informed reconstruction plus faux E2E</td>
+<td>Low-similarity 5/7 dominates; high-similarity 2/7; later live
+attempt had no accepted measurement</td>
+<td>14 reconstructed transitions; four calls/jobs per faux arm</td>
+<td>Apparatus only; no treatment claim</td>
+</tr>
+<tr>
+<td>Late structural-novelty paid screen</td>
+<td>Two terminal apparatus attempts</td>
+<td>No accepted treatment measurement or control vector</td>
+<td>V1 zero paid calls; v2 one paid call and one failed Slurm task</td>
+<td>Locked terminal; no retry or promotion</td>
+</tr>
+<tr>
+<td>Complete-action-space headroom</td>
+<td>One terminal zero-model apparatus attempt after one zero-dispatch
+setup failure</td>
+<td>Non-admitted raw dijkstra payload: <code>-early-cse-memssa</code>
+<code>292-&gt;260</code>; <code>-early-cse</code>
+<code>292-&gt;269</code>; both 20/20</td>
+<td>One scientific CPU allocation, zero model/provider/GPU calls;
+evaluator step one CPU, root reserved four</td>
+<td>Motivated one new visibility pair; no result, promotion, or
+retry</td>
+</tr>
+<tr>
+<td>Stock-26 versus full-124 first-proposal visibility</td>
+<td>One sampled-order paid directional pair</td>
+<td>Control <code>1,960/14,080</code>; treatment
+<code>1,971/14,268</code>, despite 19 unique omitted-guide flags</td>
+<td>Shared S12 plus two arm candidates: 6 CPU allocations, 2 paid Luna
+calls, 1 tool execution per arm, 1 exact zero-use blocked continuation
+per arm</td>
+<td><code>directional-loss</code>; stop without replication or
+promotion</td>
+</tr>
+<tr>
+<td>Blowfish-first proxy cascade</td>
+<td>Post hoc 13-trajectory headroom plus one prospective
+production-default wiring audit</td>
+<td>Replay retained all frontiers; prospective frontier <code>[3]</code>
+and champion 3 retained</td>
+<td>Replay: task allocations -17.3077%, summed evaluator runtime
+-28.5178%, post hoc. Audit: 8 fresh allocations and exact terminal
+accounting</td>
+<td>Apparatus-only keep; no observed saving or agent claim</td>
+</tr>
+<tr>
+<td>Full versus proxy-cascade schedule</td>
+<td>Two-block AB/BA model-free systems screen</td>
+<td>Exact metrics, verifiers, frontier <code>[3]</code>, champion 3, and
+selection <code>[2,3]</code> retained in both blocks</td>
+<td>Median wall ratio <code>0.6443014367</code>, saving
+<code>29.6263775 s</code>, evaluator-step CPU ratio
+<code>0.6785407264</code>; 28 fresh allocations total</td>
+<td>Resource gate passed; its one paid follow-up was attempted and
+closed apparatus-invalid</td>
+</tr>
+<tr>
+<td>Paid proxy-cascade directional campaign</td>
+<td>Two terminal apparatus attempts</td>
+<td>V1 failed its provider-response guard; v2 completed 14 online
+measurements but lacked the two admitted hidden-audit measurements
+required to reconstruct the treatment’s full frontier</td>
+<td>V2 used 8 Luna transports, 8 tool calls, and 16 physical CPU
+allocations; all evaluator steps completed, but only 14 measurements
+were durably admitted</td>
+<td>Campaign closed under second-apparatus-failure rule; no v3,
+comparison, or promotion</td>
+</tr>
+<tr>
+<td>Proxy-cascade hidden-audit repair</td>
+<td>Prospective tests plus one live zero-model qualification</td>
+<td>No agent-quality estimand; exact concurrent hidden-audit path
+only</td>
+<td>Jobs <code>1703787/1703788</code> overlapped and passed exact
+accounting plus 20/20 callbacks with zero model calls</td>
+<td>Apparatus-only keep; no paid or scientific authorization</td>
+</tr>
+</tbody>
+</table>
+<p>The sealed v7 pair is the primary treatment evidence. Both arms
+proposed and selected the sequence:</p>
+<pre class="text"><code>2,327 / 18,977 -&gt; 2,161 / 17,665 -&gt; 2,091 / 16,559</code></pre>
+<p>The treatment completed two typed recalls after compaction and
+selected the same final candidate. Its two protocol deviations were
+cosmetic assistant acknowledgements that rendered <code>job_</code> as
+<code>job-</code>; durable tool bindings and ledger identifiers were
+correct.</p>
+<p>The separate resurrection qualification froze four candidates:</p>
+<table>
+<thead>
+<tr>
+<th>Cell</th>
+<th style="text-align: right;">Blowfish IR</th>
+<th style="text-align: right;">Bzip2 IR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>A</code></td>
+<td style="text-align: right;">2,161</td>
+<td style="text-align: right;">17,665</td>
+</tr>
+<tr>
+<td><code>A+X</code></td>
+<td style="text-align: right;">2,161</td>
+<td style="text-align: right;">17,665</td>
+</tr>
+<tr>
+<td><code>A+E</code></td>
+<td style="text-align: right;">2,161</td>
+<td style="text-align: right;">17,534</td>
+</tr>
+<tr>
+<td><code>A+E+X</code></td>
+<td style="text-align: right;">2,161</td>
+<td style="text-align: right;">17,534</td>
+</tr>
+</tbody>
+</table>
+<p><code>X</code> had exactly zero task-local effect before and after
+<code>E</code>; the declared conditional-resurrection mechanism was not
+demonstrated. Evidence: <a
+href="../../../.autoresearch/r-resurrection-qualification/2026-08-28-v1/result.json">qualification
+result</a> and <a
+href="../../../.autoresearch/r-resurrection-qualification/2026-08-28-v1/evidence.jsonl">ledger</a>.</p>
+<h3 id="held-out-cpu-transfer">Held-out CPU transfer</h3>
+<p>Dijkstra was not in the search objective.</p>
+<table>
+<thead>
+<tr>
+<th>Comparison</th>
+<th style="text-align: right;">Control</th>
+<th style="text-align: right;">Treatment</th>
+<th>Finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sealed v7 <code>M</code></td>
+<td style="text-align: right;">292 IR</td>
+<td style="text-align: right;">292 IR</td>
+<td>Exact tie</td>
+</tr>
+<tr>
+<td>Exploratory v5 <code>W</code></td>
+<td style="text-align: right;">275 IR</td>
+<td style="text-align: right;">304 IR</td>
+<td>Treatment worse</td>
+</tr>
+<tr>
+<td>Exploratory v5 <code>R</code></td>
+<td style="text-align: right;">292 IR</td>
+<td style="text-align: right;">292 IR</td>
+<td>Exact tie</td>
+</tr>
+</tbody>
+</table>
+<p>Held-out CPU evidence does not rescue a treatment.</p>
+<h3 id="why-v5-m-is-not-isolation-grade">Why v5 <code>M</code> is not
+isolation-grade</h3>
+<p>The native v5 compaction summaries retained earlier job identifiers
+and measured IR values in both arms. The nominal control therefore
+retained evidence without typed recall. V7 fixed this by using the same
+deterministic sealed summary in both arms and verifying that earlier job
+IDs, manifest digests, and candidate bytes were absent from rebuilt
+model context.</p>
+<h3 id="whole-interface-matched-screen">Whole-interface matched
+screen</h3>
+<p>Four randomized blocks were attempted on the same live Luna runtime.
+Block V2 was operationally invalid because one harmless workspace
+inspection plus four evaluator calls exhausted the old five-response
+budget before the final assistant report; its typed arm was correctly
+not launched. The other three blocks were valid:</p>
+<table>
+<thead>
+<tr>
+<th>Block</th>
+<th style="text-align: right;">Stock selected</th>
+<th style="text-align: right;">Typed selected</th>
+<th>Frozen direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V1</td>
+<td style="text-align: right;"><code>1,958 / 13,802</code></td>
+<td style="text-align: right;"><code>1,958 / 13,747</code></td>
+<td>Typed positive</td>
+</tr>
+<tr>
+<td>V3</td>
+<td style="text-align: right;"><code>1,925 / 13,704</code></td>
+<td style="text-align: right;"><code>1,926 / 13,865</code></td>
+<td>Stock positive</td>
+</tr>
+<tr>
+<td>V4</td>
+<td style="text-align: right;"><code>1,948 / 14,047</code></td>
+<td style="text-align: right;"><code>1,959 / 13,951</code></td>
+<td>Task-wise mixed</td>
+</tr>
+</tbody>
+</table>
+<p>Across the three valid pairs, the preregistered directional result is
+inconclusive. V4’s stock arm also measured a non-selected point at
+<code>1,958 / 13,792</code>, which strictly dominates the typed selected
+point at <code>1,959 / 13,951</code>. This whole-Pareto sensitivity does
+not replace the sealed scalar decision; it establishes the comparison
+rule for later work.</p>
+<p>The screen contains 182 hash-verified ledger events, 84 artifact
+references, 56 fresh task measurements, zero reuse, and 353,153 total
+tokens. Evidence: <a
+href="../../../.autoresearch/stock-interface-pair-screen/summary-v1.md">screen
+summary</a>, <a
+href="../../../.autoresearch/stock-interface-pair-screen/summary-v1.json">machine-readable
+summary</a>, and <a
+href="../../../.autoresearch/stock-interface-pair-screen/summary-v1-correction.json">immutable
+correction</a>.</p>
+<h3 id="host-owned-terminalization">Host-owned terminalization</h3>
+<p>The host can determine the champion from authoritative ledger
+measurements immediately after the fourth candidate. A fifth assistant
+response is neither evidence nor necessary control flow. The future
+runtime therefore records one intentional host stop before any
+post-budget provider dispatch, while preserving verifier, boundary,
+duplicate, source-integrity, and exact-budget failures as hard
+failures.</p>
+<p>A read-only replay preserved all seven historical champion selections
+and revalidated 182 events, 84 artifacts, 28 evaluator dispatches, and
+56 fresh task measurements. It does not rewrite V2’s historical
+operational status. Evidence: <a
+href="../../../.autoresearch/stock-interface-pair-screen/host-terminalization-replay-v1.md">host-owned
+replay</a>.</p>
+<h3 id="concise-feedback-projection">Concise feedback projection</h3>
+<p>The first live host-owned ablation varied only what evaluator
+evidence the model saw. Full authoritative measurements remained in the
+ledger and artifact store in both arms. The randomized order was
+preregistered as full then concise.</p>
+<table>
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr>
+<th>Arm</th>
+<th style="text-align: right;">Complete measured frontier</th>
+<th style="text-align: right;">Feedback bytes</th>
+<th style="text-align: right;">Input tokens</th>
+<th style="text-align: right;">Total tokens</th>
+<th style="text-align: right;">Modeled cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Full control</td>
+<td style="text-align: right;"><code>1,925 / 13,676</code></td>
+<td style="text-align: right;">17,983</td>
+<td style="text-align: right;">15,687</td>
+<td style="text-align: right;">24,397</td>
+<td style="text-align: right;">0.075478</td>
+</tr>
+<tr>
+<td>Concise</td>
+<td style="text-align: right;"><code>1,962 / 14,103</code></td>
+<td style="text-align: right;">2,420</td>
+<td style="text-align: right;">7,189</td>
+<td style="text-align: right;">16,562</td>
+<td style="text-align: right;">0.060396</td>
+</tr>
+</tbody>
+</table>
+<p>The concise/full byte ratio was <code>0.134572</code>, passing the
+preregistered <code>&lt;= 0.25</code> compression gate. Both arms used
+exactly four provider requests, four evaluator calls, eight fresh tasks,
+zero retries or duplicates, zero post-terminal dispatches, and one
+intentional host stop. All model-visible projections matched their
+authoritative details and remaining budgets.</p>
+<p>Quality failed: concise covered <code>0/1</code> full-control Pareto
+vectors, while full covered <code>1/1</code> concise vectors and was
+strictly better on both tasks. The preregistered decision is
+<code>negative-quality</code>, so there is no replication or GPU
+transfer. Because this is one unseedable randomized pair, the result
+kills this pilot but does not estimate causal harm. Evidence: <a
+href="../../../.autoresearch/feedback-projection-screen/analysis-v1.md">feedback
+analysis</a>, <a
+href="../../../.autoresearch/feedback-projection-screen/analysis-v1.json">machine-readable
+analysis</a>, and <a
+href="../../../.autoresearch/feedback-projection-screen/preregistration.json">pair
+preregistration</a>.</p>
+<h3 id="killed-before-implementation-per-candidate-task-fusion">Killed
+before implementation: per-candidate task fusion</h3>
+<p>The next zero-model idea was to place blowfish and bzip2 in one SLURM
+allocation. A read-only topology and timing audit killed it before code
+or evaluator spend:</p>
+<ul>
+<li>the current adapter already evaluates the two tasks concurrently, so
+candidate latency is their maximum rather than their sum;</li>
+<li>bzip2 was the critical task in all eight latest candidates and all
+69 campaign search/qualification pairs in the frozen latency cohort,
+which explicitly excludes one calibration and two deliberate replay
+measurements;</li>
+<li>across all 69 pairs, the optimistic assumption that a fused
+allocation inherits the lower of the two observed queue/transport
+residuals predicts only <code>0.731 ms</code> median saving;</li>
+<li>a fused request needs four CPUs and 16 GB, which may schedule more
+slowly than the present independent two-CPU/8-GB jobs.</li>
+</ul>
+<p>The conservative expected wall saving is therefore zero. The proposed
+gate—at least two seconds and 10% median wall reduction, wins in at
+least seven of eight fixed-candidate pairs, and no slowdown above
+10%—already fails on historical evidence. No implementation, remote job,
+or model call was made. Trajectory-scoped warm-allocation reuse is a
+different hypothesis because it could remove repeated critical-path
+setup after the first candidate.</p>
+<h3 id="killed-before-implementation-broad-pareto-summary">Killed before
+implementation: broad Pareto summary</h3>
+<p>A later model-free development screen considered adding a broader
+Pareto summary to the late-stage model context. Only 3 of 21 cases met
+its proposed opportunity condition, or <code>14.2857%</code>, below the
+declared 20% headroom gate. The idea was killed before implementation
+and produced no sealed analysis artifact, source module, remote
+evaluator job, provider call, or GPU use. This is an unpersisted
+development disposition, not an experimental measurement. Its durable
+record is limited to <a href="../../../STATE.md">campaign state</a> and
+the <a href="../../../results.tsv">experiment log</a>.</p>
+<h3
+id="late-structural-novelty-retrospective-headroom-and-faux-wiring">Late
+structural novelty: retrospective headroom and faux wiring</h3>
+<p>The next bounded idea asked whether the fourth proposal should be
+nudged away from its declared parent. A fail-closed reconstruction
+reread the pinned 21-ledger <a
+href="../../../.autoresearch/compiler-gym-latency-audit/analysis-v1.json">latency
+cohort</a>, verified each ledger chain and candidate artifact, and
+recovered 14 eligible ordinal-four transitions. Similarity was the exact
+Dice-LCS quantity</p>
+<pre class="text"><code>S = 2 * LCS(child actions, parent actions) / (|child actions| + |parent actions|)</code></pre>
+<p>with low similarity defined as <code>S &lt; 0.80</code>.
+Low-similarity transitions contained 5 dominating outcomes, 0 that
+improved neither task, and 2 tradeoffs. High-similarity transitions
+contained 2, 4, and 1, respectively. The domination-rate gap was
+<code>42.857</code> percentage points.</p>
+<p>That descriptive gap is not treatment evidence. A Fisher exact
+sensitivity gives one-sided <code>p = 491/3432 ~= 0.143</code> and
+two-sided <code>p ~= 0.286</code>. The threshold and cohort query were
+development-informed; only 14/21 ledgers yielded eligible transitions;
+the pool mixes optimization trajectories with deliberately deleterious
+<code>R</code> leave-one-out/model-free diagnostics; the
+remaining-protocol positive sign depends on that diagnostic and reverses
+when it is excluded; first-declared-parent binding misattributes one
+resurrection mechanism; and action-sequence similarity is not a causal
+intervention. The analyzer therefore explicitly authorizes no provider,
+paid, treatment, promotion, or GPU claim.</p>
+<p>The allowed next step was only a four-call faux apparatus check. The
+treatment added one serialized 128-byte <code>call4Guidance</code> field
+to the third accepted result, making it visible exactly once to
+treatment provider call four. Both arms made four provider calls, four
+evaluator calls, and four tool calls, with zero duplicates, one host
+stop, zero compactions, four unique jobs, and byte-identical
+authoritative raw artifacts. Invalid or rejected third feedback receives
+no guidance. This proves prompt isolation and routing only; no model
+behavior, treatment effect, or promotion was measured.</p>
+<p>Evidence and implementation: <a
+href="../src/compiler-gym-late-novelty-headroom.ts">headroom
+analyzer</a>, <a
+href="../test/compiler-gym-late-novelty-headroom.test.ts">headroom
+regression</a>, <a
+href="../src/compiler-gym-late-novelty-guidance.ts">neutral
+guidance/projector</a>, <a
+href="../src/compiler-gym-late-novelty-pilot.ts">faux pilot policy</a>,
+and <a
+href="../test/compiler-gym-ir-delta-screen-faux-e2e.test.ts">four-call
+faux E2E</a>.</p>
+<h3 id="late-novelty-paid-screen-and-farmshare-recovery">Late-novelty
+paid screen and FarmShare recovery</h3>
+<p>V1 froze the paid hypothesis and randomized control first. It wrote
+one preflight ledger event, then stopped before the global attempt lock,
+provider, evaluator, Slurm, compaction, or GPU work. Contemporaneous
+console output identified an implementation-closure source path repeated
+from the stock bundle; that thrown text is not present in the sealed
+artifact. No terminal result exists. The preregistration and ledger
+hashes are
+<code>3ad488c6a0a0a2f6b1ed6c50ced0015cc90634e07d1310eb5618d5697703aabb</code>
+and
+<code>4a3b66a57e81e8056d81417eabc53437c0da0e3b1f781456411b797dbd0ce4d9</code>.
+Evidence: <a
+href="../../../.autoresearch/compiler-gym-late-novelty-paid-screen/2026-08-28-v1/preregistration.json">v1
+preregistration</a> and <a
+href="../../../.autoresearch/compiler-gym-late-novelty-paid-screen/2026-08-28-v1/execution-v1/evidence.jsonl">single-event
+ledger</a>.</p>
+<p>A fresh v2 namespace, source closure, random draw, and attempt lock
+then passed pre-dispatch integrity with treatment first. Exactly one
+subscription-backed <code>openai-codex/gpt-5.6-luna</code> request ran
+at <code>xhigh</code>, locally requested <code>priority</code>, zero
+retries, and zero duplicate dispatches. The upstream response API
+exposed no service-tier acknowledgement. Usage was 1,899 input and 233
+output tokens, 2,132 total, with modeled cost <code>$0.006594</code>.
+Request anchors, model resolution, source snapshot, and the returned
+first S12 tool request all matched the frozen contract.</p>
+<p>The tool call was parsed and submitted exactly once. Its first
+evaluator failed. A later read-only scheduler observation reported Slurm
+<code>1703304</code>, <code>FAILED/3:0</code>, on
+<code>barley-01</code>; the sealed local trajectory records only an
+abstract failed job, not that Slurm identity. The adapter version used
+in this attempt collapsed the failure into a 65-byte generic rejection
+and stored no raw stdout artifact, so the direct task error is
+irrecoverable. The arm stopped immediately: zero tasks were accepted,
+result three never existed, call-four guidance was never produced or
+exposed, and the control arm did not run. Compaction and RLM were
+disabled. The disposition is terminal apparatus-invalid, not a negative
+treatment effect or permission to retry.</p>
+<p>The v2 preregistration, pair result, and pair-ledger hashes are
+<code>b643267bbca810684b93557096fa67d095b402cbd77af09bb44e90166caa79c5</code>,
+<code>c628d537766dfad025a9592fc8cd01fa9e068734676db8d8bcf531120428d7bd</code>,
+and
+<code>49da646f9f772d7afa9148bb61d9be037de1ca1dff6805c01cecf6d61d89f352</code>.
+The arm result, evaluation ledger, and session hashes are
+<code>0198e9566ba562d94b8bf4fff5b8f6fc5a5124a74540cc81b5d94ac59fa0ccb9</code>,
+<code>5738b1f4af84f2771027ff934962da8616e10de0ee192c1efa8a16bf6c64ce43</code>,
+and
+<code>078bc92d63dfff1222d31ba3e7d2fda7e245e651c217947b835d10eac0d79f31</code>.
+The global lock remains hash
+<code>79b73799fb23022d0dc38f3c95e82d6256a5d8243371702c330521d1dc247001</code>.
+Evidence: <a
+href="../../../.autoresearch/compiler-gym-late-novelty-paid-screen/2026-08-29-v2/preregistration.json">v2
+preregistration</a>, <a
+href="../../../.autoresearch/compiler-gym-late-novelty-paid-screen/2026-08-29-v2/execution-v1/result.json">pair
+result</a>, <a
+href="../../../.autoresearch/compiler-gym-late-novelty-paid-screen/2026-08-29-v2/execution-v1/evidence.jsonl">pair
+ledger</a>, <a
+href="../../../.autoresearch/compiler-gym-late-novelty-paid-screen/2026-08-29-v2/execution-v1/arms/01-late-novelty-treatment/result.json">arm
+result</a>, <a
+href="../../../.autoresearch/compiler-gym-late-novelty-paid-screen/2026-08-29-v2/execution-v1/arms/01-late-novelty-treatment/evaluation/evidence.jsonl">arm
+ledger</a>, and <a
+href="../../../.autoresearch/compiler-gym-late-novelty-paid-screen/2026-08-29-v2/execution-v1/arms/01-late-novelty-treatment/sessions/pln-8ac1cae5b778b7847256ad01355da137.jsonl">session</a>.</p>
+<p>Three zero-model, one-task cold diagnostics then located and repaired
+contemporaneous environment defects without spending more subscription
+inference:</p>
+<p>The normalized v1/v2 results do not store external job IDs. Their
+content-addressed raw stderr names <code>StepId=1703309.0</code> and
+<code>StepId=1703313.0</code> with exit code 3, while v3 embeds
+<code>1703328</code> and successful evaluator output in raw stdout.
+Later read-only <code>sacct</code> supplied the normalized terminal
+states for all three jobs.</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 30%" />
+<col style="width: 23%" />
+<col style="width: 23%" />
+</colgroup>
+<thead>
+<tr>
+<th>Diagnostic</th>
+<th style="text-align: right;">Slurm</th>
+<th>Finding</th>
+<th>Result / ledger SHA-256</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V1</td>
+<td style="text-align: right;"><code>1703309</code>,
+<code>FAILED/3:0</code></td>
+<td><code>cannot import name 'Space' from 'gym.spaces'</code>; Gym
+metadata existed while package sources were missing</td>
+<td><code>1e165dd0...</code> / <code>6180035c...</code></td>
+</tr>
+<tr>
+<td>V2</td>
+<td style="text-align: right;"><code>1703313</code>,
+<code>FAILED/3:0</code></td>
+<td>Compatibility tree expected 2,749 entries, 215,462 manifest bytes,
+hash <code>c43abf...</code>; observed 1,247, 62,778,
+<code>aa9a8b...</code></td>
+<td><code>8f30b268...</code> / <code>1dfc7258...</code></td>
+</tr>
+<tr>
+<td>V3</td>
+<td style="text-align: right;"><code>1703328</code>; external
+<code>sacct</code>: <code>COMPLETED/0:0</code></td>
+<td>Full environment seal and 20/20 callbacks passed; blowfish empty
+pass measured <code>3,898</code> IR and <code>16,573</code> bytes</td>
+<td><code>51eb3155...</code> / <code>13669c9c...</code></td>
+</tr>
+</tbody>
+</table>
+<p>Evidence: diagnostic <a
+href="../../../.autoresearch/cpu-diagnostics/2026-08-29-slurm-recovery-v1/result.json">v1
+result</a> and <a
+href="../../../.autoresearch/cpu-diagnostics/2026-08-29-slurm-recovery-v1/evidence.jsonl">ledger</a>,
+<a
+href="../../../.autoresearch/cpu-diagnostics/2026-08-29-slurm-recovery-v2/result.json">v2
+result</a> and <a
+href="../../../.autoresearch/cpu-diagnostics/2026-08-29-slurm-recovery-v2/evidence.jsonl">ledger</a>,
+and <a
+href="../../../.autoresearch/cpu-diagnostics/2026-08-29-slurm-recovery-v3/result.json">v3
+result</a> and <a
+href="../../../.autoresearch/cpu-diagnostics/2026-08-29-slurm-recovery-v3/evidence.jsonl">ledger</a>.</p>
+<p>The package-version seal had not detected missing package files. Old
+extracted-file timestamps and the deletion pattern point to scratch
+cleanup, but that mechanism was not directly logged. The restored
+scratch environment is therefore healthy at the v3 timestamp, not
+guaranteed durable. Future paid admission requires a same-path live
+environment probe; a persistent versioned root or deterministic rebuild
+remains the durable follow-up.</p>
+<p>The prospective error path now throws a typed sanitized adapter error
+and stores host-only error evidence plus raw stdout/stderr as
+content-addressed run-manifest artifacts. Source sealing includes <a
+href="../src/evaluation-adapter-output-error.ts">the typed error
+module</a> in the paid preregistration, stock bundle, and transport
+runtime inventory. <a href="../test/sidecar.test.ts">Sidecar
+regressions</a> verify persistence and non-leakage. This hardening does
+not rewrite v2 or recreate its lost output.</p>
+<p>Prospective paid runner/preregistration protocol v2 additionally runs
+<a href="../src/compiler-gym-paid-live-environment-gate.ts">the sealed
+live environment gate</a> before every provider transport. It executes
+the exact frozen probe over read-only login-node SSH using
+<code>/usr/bin/env -i</code> and the pinned v2 paths, rejects any stderr
+or byte drift, and contains no Slurm command. Each pass or failure is
+appended to the host-owned pair ledger with arm and dispatch ordinal
+before the hardened provider guard. Terminal accounting requires gate
+passes to equal actual paid dispatches and attempts to equal passes plus
+failures. Faux regressions prove success ordering across two calls and
+zero provider/evaluator dispatch on failure. This requires a fresh v2
+preregistration; measurement semantics and verifier epoch are
+unchanged.</p>
+<h3 id="durable-environment-and-complete-action-space-headroom">Durable
+environment and complete-action-space headroom</h3>
+<p>The additive <a
+href="../evaluators/compiler_gym_home_bundle.py">home-bundle builder</a>
+and <a href="../test/compiler_gym_home_bundle_test.py">five-case
+regression</a> bind source bytes, target paths, modes, and hashes before
+a switch. Their SHA-256 values are
+<code>c2ee638750042ed41a675354499f7b39738fb0787e9e55b33a5e4820dd1d54d3</code>
+and
+<code>e39d052361211ce2c4f2fac0f07975049a0bc47fb52bb7b2cc2639650c799d4b</code>.
+Contemporaneous remote output, not persisted in a campaign artifact,
+reported <code>EDQUOT</code> while creating the parent before any stage
+or active-path change. These are locally verified migration mechanics,
+not a completed FarmShare migration.</p>
+<p>The complete-action-space screen froze one held-out-from-cohort
+dijkstra scaffold, the exact 124 legal LLVM 10 flags, the 26 flags
+visible in the stock prompt guide, and their 98-flag complement.
+Dijkstra was absent from the sealed blowfish/bzip2 development cohort
+but had appeared in older campaign ledgers, so it is cohort-held-out
+rather than globally unseen. Every omitted flag was inserted once at
+index two into
+<code>mem2reg,sroa,X,instcombine,simplifycfg,adce,dce</code>. Only raw
+improvements of at least <code>max(3 instructions, 0.5%)</code> reached
+the existing 20-callback verifier. Two distinct verified flags were
+required.</p>
+<p>V1 is a preserved zero-dispatch apparatus failure. The local runner
+requested an 8 MiB trusted read while the backend ceiling was 4.5 MiB.
+It installed one immutable source, then stopped before the live
+environment probe, scheduler queries, scientific lock, or
+<code>srun</code>. Its terminal ledger records
+<code>dispatchAttempts=0</code>, cleanup proved without scheduler work,
+and no result exists. Evidence: <a
+href="../../../.autoresearch/compiler-gym-complete-action-space-headroom/2026-08-29-v1/preregistration.json">v1
+preregistration</a> and <a
+href="../../../.autoresearch/compiler-gym-complete-action-space-headroom/2026-08-29-v1/execution-v1/result.json.evidence/evidence.jsonl">v1
+ledger</a>.</p>
+<p>The repair asks for exactly each source’s byte length and is covered
+by a faux remote-filesystem equality assertion. Under a fresh v2
+preregistration/output namespace, the runner passed its operational
+preflight and dispatched exactly once:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th style="text-align: right;">Raw observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Slurm job / terminal state</td>
+<td style="text-align: right;"><code>1703490</code> /
+<code>COMPLETED 0:0</code></td>
+</tr>
+<tr>
+<td>Omitted flags swept</td>
+<td style="text-align: right;">98/98</td>
+</tr>
+<tr>
+<td>Raw qualifiers</td>
+<td style="text-align: right;">5</td>
+</tr>
+<tr>
+<td>Verified omitted flags</td>
+<td style="text-align: right;"><code>-early-cse-memssa</code>,
+<code>-early-cse</code></td>
+</tr>
+<tr>
+<td>Baseline to <code>-early-cse-memssa</code></td>
+<td style="text-align: right;"><code>292 -&gt; 260</code> IR; 20/20
+callbacks</td>
+</tr>
+<tr>
+<td>Baseline to <code>-early-cse</code></td>
+<td style="text-align: right;"><code>292 -&gt; 269</code> IR; 20/20
+callbacks</td>
+</tr>
+<tr>
+<td>Evaluator CPU / wall</td>
+<td style="text-align: right;"><code>59.933243 s</code> /
+<code>61.128304 s</code></td>
+</tr>
+<tr>
+<td>Evaluator step</td>
+<td style="text-align: right;"><code>AllocCPUS=1</code>,
+<code>NTasks=1</code>, 65 CPU-seconds</td>
+</tr>
+<tr>
+<td>Root reservation</td>
+<td style="text-align: right;"><code>AllocCPUS=4</code>, 264
+allocated-CPU-seconds</td>
+</tr>
+<tr>
+<td>Native admission</td>
+<td style="text-align: right;">No; terminal apparatus-invalid</td>
+</tr>
+</tbody>
+</table>
+<p>The raw stdout is one strict JSON line and replays through the frozen
+assessor as <code>gatePassed=true</code>,
+<code>apparatusCompleted=true</code>, <code>status=passed</code>. It is
+nevertheless not the experiment result. The preregistration required
+exactly two scheduler logical CPUs at the allocation root, while
+<code>sacct</code> reported four for root and extern. A later read-only
+diagnosis showed <code>ReqMem=8G</code>, <code>MaxMemPerCPU=4000</code>,
+<code>SelectTypeParameters=CR_CORE_MEMORY</code>, and two threads per
+core: <code>ceil(8192/4000)=3</code> logical CPUs rounded to two whole
+cores, or four logical CPUs. Root <code>TotalCPU</code> still matched
+the one-worker step, and the 4.4 allocated CPU-minutes remained below
+the declared 20-minute ceiling. This explains the mismatch without
+changing the frozen exact-topology rule.</p>
+<p>The native ledger therefore contains no measurement, claim, or
+complete event and no terminal result file. It ends failed after 29
+events, with raw evaluator, stderr, and accounting artifacts preserved;
+cleanup records the terminal job and empty queue. The scientific lock
+makes the attempt exact-once. Evidence: <a
+href="../../../.autoresearch/compiler-gym-complete-action-space-headroom/2026-08-29-v2/preregistration.json">v2
+preregistration</a>, <a
+href="../../../.autoresearch/compiler-gym-complete-action-space-headroom/2026-08-29-v2/execution-v1/result.json.evidence/evidence.jsonl">v2
+ledger</a>, <a
+href="../../../.autoresearch/compiler-gym-complete-action-space-headroom/2026-08-29-v2/execution-v1/result.json.evidence/artifacts/sha256/73/dc6ffb921da7a6e85b117f53be75252c3ece290bb0111b9efafaddf2213cd8">raw
+evaluator stdout</a>, <a
+href="../../../.autoresearch/compiler-gym-complete-action-space-headroom/2026-08-29-v2/execution-v1/result.json.evidence/artifacts/sha256/1a/aa84bade0ba5369d2a2dab3477b96784245469799710d0f0be5851e3ea7ce7">embedded
+<code>sacct</code> rows</a>, and <a
+href="../../../.autoresearch/attempt-locks/complete-action-space-headroom-e7f409c498814b28f11af2fcfdaccaa1b87fb64c76b347b343d33a1c52c92255.lock">attempt
+lock</a>.</p>
+<p>The scientific signal was complete enough to motivate, but not
+formally promote, one genuinely new exploratory stock-26 versus full-124
+prompt-visibility pair. That pair used its own hypothesis, entropy draw,
+source closure, namespace, output, and exact-once locks, plus a
+scheduler contract that distinguishes the one-worker evaluator step from
+a two- or four-logical-CPU root reservation. It is not a v2 retry or
+rescue.</p>
+<h3 id="paid-first-proposal-action-guide-visibility">Paid first-proposal
+action-guide visibility</h3>
+<p>The visibility experiment froze a guide-only prompt difference. Both
+arms retained the same full legal 124-action execution space and the
+same unenumerated <code>minItems: 1</code>, <code>maxItems: 256</code>
+tool schema; control saw the stock 26-flag guide, while treatment saw
+that prefix plus the canonical omitted-98 suffix. It tested one first
+proposal per arm, with no compaction, RLM children, web access, retries,
+replacements, or reused measurements.</p>
+<p>Before either paid lock or provider transport, a shared zero-model
+S12 gate made two fresh allocations and passed every frozen
+condition:</p>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 26%" />
+<col style="width: 26%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr>
+<th>Shared gate task</th>
+<th style="text-align: right;">IR instructions</th>
+<th style="text-align: right;">Object-text bytes</th>
+<th style="text-align: right;">Semantic callbacks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>blowfish</td>
+<td style="text-align: right;">1,970</td>
+<td style="text-align: right;">21,501</td>
+<td style="text-align: right;">20/20</td>
+</tr>
+<tr>
+<td>bzip2</td>
+<td style="text-align: right;">13,838</td>
+<td style="text-align: right;">166,545</td>
+<td style="text-align: right;">20/20</td>
+</tr>
+</tbody>
+</table>
+<p>The paid first proposals then produced:</p>
+<table>
+<colgroup>
+<col style="width: 13%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr>
+<th>Arm</th>
+<th style="text-align: right;">Blowfish IR / object bytes</th>
+<th style="text-align: right;">Bzip2 IR / object bytes</th>
+<th style="text-align: right;">Unique omitted-guide flags</th>
+<th style="text-align: right;">Provider / tool calls</th>
+<th style="text-align: right;">Blocked continuation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stock-26 control</td>
+<td style="text-align: right;"><code>1,960 / 22,380</code></td>
+<td style="text-align: right;"><code>14,080 / 172,685</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1 / 1</td>
+<td style="text-align: right;">1, exact zero usage</td>
+</tr>
+<tr>
+<td>Full-124 treatment</td>
+<td style="text-align: right;"><code>1,971 / 23,040</code></td>
+<td style="text-align: right;"><code>14,268 / 181,907</code></td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">1 / 1</td>
+<td style="text-align: right;">1, exact zero usage</td>
+</tr>
+</tbody>
+</table>
+<p>Both candidates passed all 20 callbacks on both tasks, and neither
+arm recorded a policy or apparatus failure. Treatment engaged the
+proposed mechanism by uniquely using 19 guide-omitted flags, but control
+strictly Pareto-dominated it. The diagnostic normalized minimax
+comparison also favored control. The preregistered decision is therefore
+<code>directional-loss</code> with next gate
+<code>stop-visibility-v1</code>.</p>
+<p>The six unique CPU allocations were <code>1703515</code>,
+<code>1703516</code>, <code>1703519</code>, <code>1703520</code>,
+<code>1703521</code>, and <code>1703522</code>. There were exactly two
+paid subscription-model requests, two successful tool executions, four
+arm task evaluations, and two additional shared-gate task evaluations.
+Each arm’s attempted continuation was intercepted locally at the
+one-call ceiling; the persisted aborted assistant message has zero
+input, output, cache, total-token, and cost usage, so it is not a third
+or fourth paid request.</p>
+<p>The local entropy draw sampled control first, then treatment. Because
+it had no external precommitment or tamper-evident assignment, the
+sealed result sets <code>randomizedInferenceAllowed=false</code> and
+<code>causalClaimAllowed=false</code>. It also sets default, GPU, and
+NanoGPT promotion to false. The directional loss stops this pilot; it
+does not show that full-guide visibility is generally harmful, and it
+authorizes no repeat, default change, interaction test, KernelBench
+transfer, or NanoGPT run.</p>
+<p>Key sealed evidence:</p>
+<ul>
+<li><a
+href="../../../.autoresearch/compiler-gym-action-space-visibility/2026-08-29-v1/preregistration.json">preregistration</a>,
+SHA-256
+<code>30c6b86d2cd043ed766fb3ff97b9c8179c9a664529fd6af95039f05aeb323024</code>;</li>
+<li><a
+href="../../../.autoresearch/compiler-gym-action-space-visibility/2026-08-29-v1/execution/result.json">terminal
+result</a>, SHA-256
+<code>f113e6ec8bba8cadf9ee2165205bda61802a7145074ab9da40c2f48d50419ccc</code>;</li>
+<li><a
+href="../../../.autoresearch/compiler-gym-action-space-visibility/2026-08-29-v1/execution/evidence.jsonl">pair
+ledger</a>, SHA-256
+<code>9d2babb8e90ffffaae64d624dc8d2ffbe1a016020cb87c754c508550f7f0497a</code>;</li>
+<li><a
+href="../../../.autoresearch/compiler-gym-action-space-visibility/2026-08-29-v1/execution/shared-s12/evidence.jsonl">shared-S12
+ledger</a>, SHA-256
+<code>48f10ac972b9b714c7bbb6996944d309d3de642932763d7cb7eaf0e0dffc2fa4</code>;</li>
+<li><a
+href="../../../.autoresearch/compiler-gym-action-space-visibility/2026-08-29-v1/execution/arm-1-stock-26-guide-control/evaluation/evidence.jsonl">control
+evaluation ledger</a>, SHA-256
+<code>edece3771988b155f43f49dc1bd866f8f933ac44b729625629e2681e9ea2ecd1</code>,
+and <a
+href="../../../.autoresearch/compiler-gym-action-space-visibility/2026-08-29-v1/execution/arm-1-stock-26-guide-control/sessions/pav-4f539dc81e7b6086b952709190511a9f.jsonl">control
+session</a>, SHA-256
+<code>d9e67922642d901e9faab58986ba03216d93457d44a02a11125254f066f95b71</code>;</li>
+<li><a
+href="../../../.autoresearch/compiler-gym-action-space-visibility/2026-08-29-v1/execution/arm-2-stock-124-guide-treatment/evaluation/evidence.jsonl">treatment
+evaluation ledger</a>, SHA-256
+<code>578346149cb01f3bb87720c0675fc3bf37770721da5e061d891377b31054c130</code>,
+and <a
+href="../../../.autoresearch/compiler-gym-action-space-visibility/2026-08-29-v1/execution/arm-2-stock-124-guide-treatment/sessions/pav-4f539dc81e7b6086b952709190511a9f.jsonl">treatment
+session</a>, SHA-256
+<code>92903a50cf2400acf1905728f790eb1f3ec686997c5c8404bf87daba3996f0b0</code>.</li>
+</ul>
+<p>The exact shared-S12, control, and treatment raw-aggregate SHA-256
+values are
+<code>37814430137bbd27c15092f184632149f923e5b05b2a04f1538529acfe379e72</code>,
+<code>f2a20a38dd77f8518afb64c37143a6113d59d5c38c3fe986fc581e3ce9c49f0e</code>,
+and
+<code>38924f9624efc596939f034bb264a90dfb62bdb6e08f8d6fdbe225acbbce8d6d</code>.
+The <a
+href="../../../.autoresearch/compiler-gym-action-space-visibility/2026-08-29-v1/execution/provider-request-anchor.json">provider-request
+pair anchor</a> is SHA-256
+<code>7267061180115f8d637455874fd5cf63b011dafa65ae3c8a84f61c0535a498b1</code>
+and binds the guide-only request difference. The requests locally asked
+for <code>priority</code>; no artifact claims that the upstream endpoint
+acknowledged a priority tier.</p>
+<h3 id="prospective-blowfish-proxy-cascade-qualification">Prospective
+blowfish-proxy cascade qualification</h3>
+<p>The development screen was a sealed post hoc replay over 13 natural
+four-candidate trajectories. Selecting the best two distinct blowfish IR
+tiers retained every complete two-task Pareto frontier while changing
+task allocations from 104 to 86 (<code>17.3077%</code>) and summed
+evaluator runtime from <code>947,686.128</code> to
+<code>677,427.105 ms</code> (<code>28.5178%</code>). Those values
+established headroom for one model-free systems audit only. Later
+candidates in the historical trajectories had already seen bzip2
+feedback, and the replay’s evaluator sum is neither feedback latency nor
+a prospective timing comparison.</p>
+<p>The separately preregistered production-default audit evaluated one
+frozen four-candidate batch:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th style="text-align: right;">Fresh allocations</th>
+<th>Candidates</th>
+<th>Visibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Blowfish proxy</td>
+<td style="text-align: right;">4</td>
+<td>1, 2, 3, 4</td>
+<td>Cascade evidence</td>
+</tr>
+<tr>
+<td>Selected bzip2</td>
+<td style="text-align: right;">2</td>
+<td>2, 3</td>
+<td>Cascade evidence</td>
+</tr>
+<tr>
+<td>Omitted bzip2 audit</td>
+<td style="text-align: right;">2</td>
+<td>1, 4</td>
+<td>Hidden audit only</td>
+</tr>
+</tbody>
+</table>
+<p>All eight Slurm IDs, job names, and transient caches were unique. All
+24 root/extern/step accounting rows ended <code>COMPLETED/0:0</code>;
+the terminal queue was empty. There were no failed allocations, retries,
+replacements, reused measurements, model calls, provider dispatches, RLM
+children, or GPU allocations. The run recorded 102 allocation-wall
+seconds, 196 requested task CPU-seconds, and 408 scheduler logical
+CPU-seconds. Full reconstruction retained frontier ordinal
+<code>[3]</code> and champion 3.</p>
+<p>The actual qualification deliberately ran the two hidden audit
+allocations, so it consumed eight allocations rather than six. The only
+allowed saving statement is the frozen counterfactual: a terminal
+cascade would use 6 instead of 8 allocations, a 25% allocation-count
+reduction. No actual compute, CPU, wall-time, queue, feedback-latency,
+agent-performance, default, GPU-transfer, or NanoGPT claim follows.</p>
+<p>Evidence anchors: <a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-headroom/2026-08-29-v1/replay-result.json">sealed
+replay</a>, SHA-256
+<code>824065b538e0eb38436f32eb981970497ecf3d64a815a4b8dafcc1f559bd79d2</code>;
+<a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-qualification/2026-08-29-v1/preregistration.json">preregistration</a>,
+SHA-256
+<code>9a76b71cb66724182c8d393469a3dd403e211449460a3f31cb163cb03dd41da3</code>;
+<a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-qualification/2026-08-29-v1/execution/result.json">terminal
+result</a>, SHA-256
+<code>11ead1ff072cad2dd01ade41ef9ad2b362e14da9aab04573e4a0a543d7fc9edb</code>;
+and <a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-qualification/2026-08-29-v1/execution/evidence.jsonl">strict
+ledger</a>, SHA-256
+<code>d27b5e85bf7d221eab88b856e2f310c9575810b531c79e70933b71d91f5e8446</code>,
+terminal event
+<code>3bf8544b224303980990ee3a58f36aeae860b7b9945c0064c8aa39e512fb11ac</code>.</p>
+<h3
+id="counterbalanced-full-versus-cascade-resource-screen">Counterbalanced
+full-versus-cascade resource screen</h3>
+<p>The next exact-once experiment tested the resource claim
+prospectively, without a model. It froze the same four candidates and
+ran two counterbalanced blocks: full control then cascade, followed by
+cascade then full control. Each control arm evaluated blowfish and bzip2
+concurrently within four sequential candidate rounds, for eight fresh
+one-task allocations. Each cascade arm ran four sequential blowfish
+rounds, derived <code>[2, 3]</code> solely from that arm’s fresh
+accepted blowfish IR values, then evaluated bzip2 for those two
+candidates concurrently, for six fresh allocations. Maximum evaluator
+concurrency was two in every arm.</p>
+<p>Environment probes, source readbacks, and source preparation ran
+outside the timed arm intervals. Each arm’s feedback-ready interval
+started immediately before its first online dispatch and ended only
+after its final allocation was terminal, verified, and durably appended.
+Evaluator-step CPU is the <code>.0</code> step’s
+<code>CPUTimeRAW</code>; it is intentionally narrower than root
+scheduler allocation accounting.</p>
+<table>
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 11%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: right;">Block</th>
+<th>Order</th>
+<th style="text-align: right;">Full-control wall / step CPU</th>
+<th style="text-align: right;">Cascade wall / step CPU</th>
+<th style="text-align: right;">Wall ratio</th>
+<th style="text-align: right;">Wall saving</th>
+<th style="text-align: right;">Step-CPU ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">1</td>
+<td>Control -&gt; cascade</td>
+<td style="text-align: right;"><code>84.477934 s / 198 s</code></td>
+<td style="text-align: right;"><code>54.664385 s / 136 s</code></td>
+<td style="text-align: right;"><code>0.6470847760</code></td>
+<td style="text-align: right;"><code>29.813549 s</code></td>
+<td style="text-align: right;"><code>0.6868686869</code></td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td>Cascade -&gt; control</td>
+<td style="text-align: right;"><code>82.121875 s / 188 s</code></td>
+<td style="text-align: right;"><code>52.682669 s / 126 s</code></td>
+<td style="text-align: right;"><code>0.6415180973</code></td>
+<td style="text-align: right;"><code>29.439206 s</code></td>
+<td style="text-align: right;"><code>0.6702127660</code></td>
+</tr>
+<tr>
+<td style="text-align: right;">Median</td>
+<td>AB/BA</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;"><code>0.6443014367</code></td>
+<td style="text-align: right;"><code>29.6263775 s</code></td>
+<td style="text-align: right;"><code>0.6785407264</code></td>
+</tr>
+</tbody>
+</table>
+<p>All preregistered gates passed. Every arm reproduced the frozen
+candidate metrics and verifier results, control’s full frontier was
+<code>[3]</code>, each cascade retained <code>[3]</code>, and champion 3
+was unchanged. Both cascades selected <code>[2, 3]</code> from blowfish
+inputs <code>2,091</code>, <code>1,970</code>, <code>1,958</code>, and
+<code>1,980</code>. Exact allocation counts were six versus eight, every
+block reduced evaluator-step CPU by at least 20%, median wall was more
+than 10% and ten seconds lower, and neither cascade arm was more than 5%
+slower.</p>
+<p>The run used 28 fresh unique one-task allocations, Slurm
+<code>1703626</code> through <code>1703653</code>, with 84
+root/extern/step accounting rows. Every row was terminal
+<code>COMPLETED/0:0</code>. It also recorded eight local seals and ten
+create-only remote locks. Aggregate accounting was 335 allocation-wall
+seconds, 648 evaluator-step CPU-seconds, and 1,340 scheduler logical
+CPU-seconds. There were zero failed allocations, retries, replacements,
+reused measurements, model calls, provider dispatches, tool calls, RLM
+children, compactions, or GPU allocations.</p>
+<p>This is positive evidence for the fixed-batch model-free schedule and
+resource mechanism under this FarmShare CPU design. Counterbalancing
+reduces simple order bias but does not turn two blocks over one
+candidate batch into an agent-performance experiment. The result
+qualified one separately preregistered paid directional campaign, which
+was later attempted and closed apparatus-invalid. It does not establish
+a causal agent benefit, support a default change, or authorize
+KernelBench, GPU, or NanoGPT transfer.</p>
+<p>Evidence anchors: <a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-resource-screen/2026-08-29-v1/preregistration.json">resource-screen
+preregistration</a>, SHA-256
+<code>554e3530a3adc5bbe800cce69eb06bdf501823d394e835734e90e2371029513e</code>;
+<a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-resource-screen/2026-08-29-v1/execution/result.json">terminal
+result</a>, SHA-256
+<code>894d444f7059ac8c301eee8b4167d88fa0314d2f9f4c345873f56cb6ad7e862f</code>;
+and <a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-resource-screen/2026-08-29-v1/execution/evidence.jsonl">strict
+ledger</a>, SHA-256
+<code>21d0e379151b1c4618f96adea41974490cdc064ebfd3a850e0cb07d4c4b2af6f</code>,
+terminal event
+<code>0d2aac8cb65ec72996299099a4807a9ac67c9e2c6c8396c8ce9d947172fe0715</code>.
+The scientific identity is
+<code>22d838d4c144732c1cfcf064a55f65f61b1eea619b826a31ee42dbc0c67cb45c</code>.</p>
+<h3 id="paid-proxy-cascade-campaign-and-apparatus-qualification">Paid
+proxy-cascade campaign and apparatus qualification</h3>
+<p>The separately preregistered paid campaign consumed two fresh
+identities and then stopped under its second-apparatus-failure rule.</p>
+<p>V1 ran control first, made two accepted proposals and four task
+allocations, then the pre-transport history guard rejected a valid
+second-turn response as
+<code>history turn 2 reasoning item shape drifted</code>. The failure
+was inside the provider-shape apparatus, not a model-policy or evaluator
+result. Exact sealed replay passes after the parser repair, while
+malformed shapes remain rejected; those prospective tests do not change
+v1. Its <a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-paid-pilot/2026-08-29-v1/preregistration.json">preregistration</a>,
+<a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-paid-pilot/2026-08-29-v1/execution/result.json">terminal
+result</a>, and <a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-paid-pilot/2026-08-29-v1/execution/evidence.jsonl">strict
+ledger</a> have SHA-256 values
+<code>1c016ddff62f6556464febb8ae8a4fb0026600542e195a950cc9e4ee21d09e95</code>,
+<code>0b59060a1df32587eaaab336a91466b0bbb740aadf5d8e860d2bda2857b910e5</code>,
+and
+<code>538b9c906eb1c7e357faa1caacee8a87dc009fe3f7e012f20fd7f14368ec456c</code>.
+Its consumed scientific identity is
+<code>16ba4339af4c119cd91cfde2d88bf123086bffb291c2b2b8f9ae7c0a0f3f61f2</code>.</p>
+<p>V2 used a fresh identity and randomized treatment before control.
+Both online arms reached their four-call terminal boundary: eight real
+Luna transports, eight tool calls, and 14 verified online task
+measurements. Treatment used six online allocations because bzip2 was
+delayed to its two blowfish-selected candidates; control used eight. Two
+post-terminal bzip2 audits intended to remain agent-inaccessible were
+then launched for the omitted treatment candidates. The host admitted
+neither measurement, and the post-audit session seal did not complete,
+so the frozen result does not claim that agent inaccessibility was
+established. The durable result contains 14 allocations even though
+read-only <code>sacct</code> proves 16 physical allocations, jobs
+<code>1703757</code> through <code>1703772</code>, and all 48
+root/extern/<code>.0</code> rows completed <code>0:0</code> on
+<code>barley-01</code>.</p>
+<p>The exact failure was semantic accounting, not Slurm or
+evaluator-process failure. For hidden jobs <code>1703771</code> and
+<code>1703772</code>, root and evaluator <code>.0</code> each ended
+after 17 seconds, while <code>.extern</code> ended one second later
+after 18 seconds. The old adapter applied root temporal containment to
+both <code>.extern</code> and <code>.0</code>; Slurm’s
+<code>.extern</code> containment/cleanup step may legitimately outlive
+the root accounting row. The two raw hidden evaluator outputs are
+unrecoverable because interactive <code>srun</code> piped them through
+the host and the old failure path discarded its ordered child errors and
+streams.</p>
+<p>No v2 online result is scientifically admitted. The sealed result has
+<code>assessment=null</code>,
+<code>liveScientificEvidenceEligible=false</code>, and terminal
+classification
+<code>terminal-apparatus-invalid-attempt-identity-consumed</code>.
+Descriptively, the treatment’s online path used 126 evaluator-step
+CPU-seconds versus control’s 202 and its deployed online vector
+<code>(1,958, 13,790)</code> did not cover control
+<code>(1,944, 13,706)</code>. Neither observation is a formal resource
+or directional comparison because the required treatment frontier
+reconstruction and hidden-audit integrity seal did not complete. There
+is no v3, replacement, pooled frontier, replication, default change, GPU
+transfer, or NanoGPT promotion.</p>
+<p>V2’s <a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-paid-pilot/2026-08-29-v2/preregistration.json">preregistration</a>,
+<a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-paid-pilot/2026-08-29-v2/execution/result.json">terminal
+result</a>, and <a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-paid-pilot/2026-08-29-v2/execution/evidence.jsonl">strict
+ledger</a> have SHA-256 values
+<code>0c6ab6b481e5482499eae591bb970535c332cb602b170321c97c7eb6df372ee5</code>,
+<code>98077f929e90169a18754fce8c06401605ee29e3ede19c3e672a01dac6fc4e85</code>,
+and
+<code>1b218d60ebac1e4c54ff10058a841afe5a42f3b2ed846b55d19d3cb9b2ef6985</code>.
+The ledger terminal event is
+<code>26f8206fe2483e0c315d54d8eb2bb6143021092ff6ff412f1d7626e0d2cdceea</code>;
+the consumed scientific identity is
+<code>7522261ba2c357f3e89e9bbe272a7374b578975e3784a7d88ce943035747cc0e</code>.</p>
+<p>The prospective repair removes only <code>.extern</code>
+start/end/elapsed containment against root. It still requires the exact
+root/extern/<code>.0</code> identity and shape, one node, the declared
+CPU/task structure, matching node, valid timestamps, terminal
+<code>COMPLETED/0:0</code>, and a 300-second per-row bound; the
+evaluator <code>.0</code> remains strictly contained by root. The
+adapter reports the parsed Slurm ID before accounting collection. The
+paid runner now records attempt, external-allocation,
+terminal-measurement, and failure counts; running and failed states;
+content-addressed stdout, stderr, and typed host evidence; every ordered
+aggregate child; and a failure-path seal proving both agent sessions
+unchanged after hidden work drains.</p>
+<p>The focused paid matrix passed 60/60, the legacy proxy-cascade suite
+53/53, the resource suite 37/37, and the full repository check. A fresh
+model-free FarmShare qualification then ran two concurrent fixed bzip2
+jobs through the repaired canonical adapter. Slurm <code>1703787</code>
+and <code>1703788</code> overlapped; each root/extern/<code>.0</code>
+triple completed <code>0:0</code>, and each task passed all 20 semantic
+callbacks. It made zero model/provider/session calls and is explicitly
+scientific-ineligible. Its <a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-paid-apparatus-qualification/2026-08-29-v1/result.json">result</a>,
+<a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-paid-apparatus-qualification/2026-08-29-v1/evidence.jsonl">strict
+ledger</a>, and <a
+href="../../../.autoresearch/compiler-gym-proxy-cascade-paid-apparatus-qualification/2026-08-29-v1/seal.json">seal</a>
+have SHA-256 values
+<code>eb5ecece523916d6712e68e2e50f343da151ebf59625cc9841ce50c08ed53694</code>,
+<code>6c19d682332d49def1e9d579496fb0bc312c33fd2abf42e8d44e3de5854a02f6</code>,
+and
+<code>1913bed248864a3ab80facd39138b996f2af4b2e35ae199ed2b4c6148e1e861e</code>.
+The ledger terminal event is
+<code>0798a2290151482f064a7eed47edc25c3b5d87450c1218cfb67ddd88368ee123</code>;
+qualification ID is
+<code>3ce586d3-4b89-4e21-9f55-6ae012903a34</code>.</p>
+<p>This qualification makes the future apparatus usable. It does not
+reopen the paid campaign. Any later paid experiment requires separate
+authorization and a genuinely new hypothesis, protocol, name, identity,
+draw, namespace, locks, sessions, source closure, and fresh
+measurements; no v1/v2 candidate, metric, or trajectory history may seed
+the model.</p>
+<h3 id="warm-allocation-headroom-model">Warm-allocation headroom
+model</h3>
+<p>The distinct trajectory-scoped hypothesis has enough modeled headroom
+for a fixed-candidate pilot. Among 18 multi-candidate ledgers in the
+69-candidate cohort, there are 48 post-first measurements. Their median
+bzip2 queue/transport residual is <code>8.708 s</code>. If a warm worker
+removed that residual completely after initial admission, the median
+per-ledger reclaim would be <code>20.298 s</code>, or 24.9% of the
+summed candidate critical path.</p>
+<p>That is an optimistic upper-bound proxy, not a causal estimate: the
+residual combines queueing, SSH, launch/teardown, and I/O, and a warm
+worker retains some transport overhead while reserving four CPUs during
+model-thinking gaps. The data-compatible lower bound is zero. A safe
+pilot must therefore measure pool acquisition, idle reservation,
+per-request transport, and verified cleanup separately while keeping the
+evaluator itself one-shot and unchanged.</p>
+<p>The cohort and every timing field are reconstructed from strict
+canonical ledgers, with exact hardware/provenance pins and an
+independently checked recorded-residual equation. Evidence: <a
+href="../../../.autoresearch/compiler-gym-latency-audit/analysis-v1.md">latency
+audit</a>, <a
+href="../../../.autoresearch/compiler-gym-latency-audit/analysis-v1.json">machine-readable
+analysis</a>, and <a
+href="../../../.autoresearch/compiler-gym-latency-audit/analysis-v1.sha256">input/output
+hash manifest</a>.</p>
+<h3 id="warm-transport-result-and-kill">Warm transport result and
+kill</h3>
+<p>The mechanism-only warm-root pilot first compared persistent reuse
+with repeatedly acquired fresh warm roots. Across two sealed blocks it
+preserved exact semantics and won all eight candidate timings, with a
+<code>16.033 s</code> median saving. That established only that reusing
+an already-warm root beats reacquiring warm roots; it did not compare
+against the production stock-cold path.</p>
+<p>The subsequent matched systems gate made that comparison. Both arms
+used the same four frozen candidates and produced the same requests, job
+identities, task metrics, verifier evidence, lineage, and budgets. Stock
+cold completed in <code>124.792743916 s</code>; persistent warm
+completed in <code>194.672781209 s</code>, a <code>69.880037293 s</code>
+regression. The warm root ended cleanly, with four allocated CPUs, exact
+<code>CPUTimeRAW = AllocCPUS × ElapsedRaw</code> accounting,
+acknowledgements <code>[0,1]</code>, and no residual queue entry.</p>
+<p>The declared <code>&gt;=10%</code> improvement gate failed.
+Persistent warm transport is stopped, and the agent-facing Luna screen
+was never launched. Evidence: <a
+href="../../../.autoresearch/stock-interface-transport-pair/execution-v1/result.json">matched
+result</a>, <a
+href="../../../.autoresearch/stock-interface-transport-pair/execution-v1/execution-manifest.json">execution
+manifest</a>, and <a
+href="../../../.autoresearch/stock-interface-transport-pair/preregistration-v1.json">preregistration</a>.</p>
+<h3 id="sealed-c1-control-plane-qualification">Sealed C1 control-plane
+qualification</h3>
+<p>The candidate-scoped no-model systems hypothesis asked whether one
+two-rank SLURM step could remove enough control latency to justify a
+sealed four-candidate CPU screen. C1 v2 permitted one root submission,
+one candidate, two fresh task evaluations, zero provider calls, five
+CPU-allocation minutes, zero GPU-hours, and no replacement run.</p>
+<p>BatchMode authentication and the required preflight passed. The
+sealed runner then submitted held root <code>1702093</code> exactly
+once. Before release or candidate publication, scheduler identity
+validation received <code>NumNodes=1-1</code> and failed its frozen
+<code>NumNodes === "1"</code> assertion. Slurm documents this field as
+<a
+href="https://slurm.schedmd.com/scontrol.html"><code>min_count[-max_count]</code></a>,
+so <code>1-1</code> denotes the exact one-node bound rather than a wider
+allocation request. This identifies a strict representation parser
+defect; it does not turn the failed attempt into a valid measurement or
+permit another dispatch.</p>
+<p>The immutable five-event ledger and failure manifest classify the
+attempt post-submit and terminal. Sealed cleanup-only recovery was
+invoked once and failed on the same parser assertion. After validating
+the exact held-job identity from the persisted handle and scheduler
+record, external cleanup ran
+<code>/usr/bin/scancel --full 1702093</code>. The subsequent scheduler
+observation found no queue entry; <code>sacct -X</code> records
+<code>CANCELLED</code>, <code>ExitCode=0:0</code>,
+<code>AllocCPUS=0</code>, <code>ElapsedRaw=0</code>, and
+<code>CPUTimeRAW=0</code>. The sibling cleanup attestation proves
+operational removal only: it does not rewrite the native
+<code>rootCleanupVerified=false</code> field or make C1 pass.</p>
+<p>The preregistered <code>kill-job-step-transport</code> decision
+therefore fired. The attempt used one root submission but zero provider
+calls, candidate steps, fresh task evaluations, CPU-allocation seconds,
+or GPU-hours. There is no replacement run and the C1–C4 screen remains
+unrun. Evidence: <a
+href="../../../.autoresearch/compiler-gym-job-step-qualification/preregistration-v2.json">v2
+preregistration</a>, <a
+href="../../../.autoresearch/compiler-gym-job-step-qualification/runtime-manifest-v2.json">runtime
+manifest</a>, <a
+href="../../../.autoresearch/compiler-gym-job-step-qualification/execution-v2/failure.json">terminal
+failure manifest</a>, <a
+href="../../../.autoresearch/compiler-gym-job-step-qualification/execution-v2/evidence.jsonl">immutable
+execution ledger</a>, <a
+href="../../../.autoresearch/compiler-gym-job-step-qualification/execution-v2/cleanup-recovery-failure.json">native
+recovery failure</a>, <a
+href="../../../.autoresearch/compiler-gym-job-step-qualification/execution-v2-manual-cleanup-v1.json">external
+cleanup attestation</a>, <a href="../../../STATE.md">campaign state</a>,
+and <a href="../../../results.tsv">experiment log</a>.</p>
+<h3 id="ir-delta-feedback-qualification-and-paid-screen">IR-delta
+feedback qualification and paid screen</h3>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 30%" />
+<col style="width: 30%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: right;">Iteration</th>
+<th>Gate</th>
+<th>Terminal result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">9</td>
+<td>Direct action-trace apparatus, v1–v3</td>
+<td>Terminal infrastructure discard; v3 completed eight exact
+metric/verifier allocations but hit a frozen raw no-effect versus
+observed <code>+1</code> IR contradiction.</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td>One-environment IR-delta smoke</td>
+<td>Mechanism-only pass over four fresh ABBA allocations; promote only
+to a broader model-free gate.</td>
+</tr>
+<tr>
+<td style="text-align: right;">11</td>
+<td>Formal IR-delta qualification</td>
+<td>Mechanism-only pass over eight fresh allocations; separately
+preregistered paid screen eligible.</td>
+</tr>
+<tr>
+<td style="text-align: right;">12</td>
+<td>Paid directional screen v1</td>
+<td>Terminal apparatus-invalid before treatment feedback or
+control.</td>
+</tr>
+<tr>
+<td style="text-align: right;">13</td>
+<td>Paid directional screen v2</td>
+<td>Terminal scientific-policy nonconformance in treatment; no control
+or pair result.</td>
+</tr>
+</tbody>
+</table>
+<p>The first direct action-trace apparatus did not admit a result. V1
+stopped before allocation because its frozen remote source parent was
+absent; v2 stopped after one allocation because its environment paths
+were stale. V3 completed all eight planned allocations with exact
+terminal metrics and verifier results, but its frozen parser rejected
+<code>-mergereturn</code>: CompilerGym reported no module modification
+while the observed IR count increased by one. The contradiction was
+terminal under that preregistration. No v3 result or retry is allowed.
+Evidence: <a
+href="../../../.autoresearch/compiler-gym-action-trace-qualification/2026-08-28-v1/preregistration.json">v1
+preregistration</a>, <a
+href="../../../.autoresearch/compiler-gym-action-trace-qualification/2026-08-28-v1/execution/evidence.jsonl">v1
+ledger</a>, <a
+href="../../../.autoresearch/compiler-gym-action-trace-qualification/2026-08-28-v2/preregistration.json">v2
+preregistration</a>, <a
+href="../../../.autoresearch/compiler-gym-action-trace-qualification/2026-08-28-v2/execution/evidence.jsonl">v2
+ledger</a>, <a
+href="../../../.autoresearch/compiler-gym-action-trace-qualification/2026-08-28-v3/preregistration.json">v3
+preregistration</a>, and <a
+href="../../../.autoresearch/compiler-gym-action-trace-qualification/2026-08-28-v3/execution/evidence.jsonl">v3
+ledger</a>.</p>
+<p>A narrower IR-delta smoke then observed only the metric used by the
+objective. Four fresh ABBA allocations on L46/blowfish preserved
+<code>1,981</code> IR, <code>23,028</code> object-text bytes, and 20/20
+verification; the trace telescoped exactly even across the
+<code>-mergereturn: +1</code> step. Median total-runtime ratio was
+<code>0.935880</code> and maximum <code>1.038765</code>. This passed
+only to the broader no-model qualification. Evidence: <a
+href="../../../.autoresearch/compiler-gym-ir-delta-smoke/2026-08-28-v1/preregistration.json">smoke
+preregistration</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-smoke/2026-08-28-v1/execution/result.json">result</a>,
+and <a
+href="../../../.autoresearch/compiler-gym-ir-delta-smoke/2026-08-28-v1/execution/evidence.jsonl">ledger</a>.</p>
+<p>The no-model qualification compared canonical evaluation against
+evaluation with a per-action <code>IrInstructionCount</code> trace for
+S12 and L46 on blowfish and bzip2. All eight allocations were fresh.
+Each canonical/treatment pair matched final IR count, object-text size,
+action indices, command line, and all 20 verifier callbacks. Trace
+deltas telescoped exactly to the terminal count. The median
+treatment/control intrinsic-runtime ratio was <code>0.996886</code> and
+the maximum was <code>1.021607</code>, both inside the frozen limits.
+The two agent-visible trace additions totaled 2,039 bytes, or 19.66% of
+their control envelopes. This qualified a separately preregistered paid
+screen; it did not make an agent-benefit claim. Evidence: <a
+href="../../../.autoresearch/compiler-gym-ir-delta-qualification/2026-08-28-v1/preregistration.json">qualification
+preregistration</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-qualification/2026-08-28-v1/execution/result.json">result</a>,
+and <a
+href="../../../.autoresearch/compiler-gym-ir-delta-qualification/2026-08-28-v1/execution/evidence.jsonl">ledger</a>.</p>
+<p>Paid-screen v1 made one Luna dispatch and evaluated S12 on two fresh
+tasks. The measurements were valid at <code>1,970 / 21,501 bytes</code>
+for blowfish and <code>13,838 / 166,545 bytes</code> for bzip2, with
+20/20 verifier callbacks on both. The host rejected the aggregate before
+feedback because Python emitted exponent spellings for small finite
+timings where JavaScript canonical JSON emitted decimals. No adaptive
+request or control arm ran. The attempt remains sealed as
+apparatus-invalid. A future parser repair accepts only mathematically
+exact numeric re-spellings outside strings and fails closed on
+whitespace, key order, string, lossy-number, negative-zero, underflow,
+unsafe-integer, non-finite, hash, schema, and trace mutations. Evidence:
+<a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v1/preregistration.json">v1
+preregistration</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v1/execution-v1/result.json">pair
+result</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v1/execution-v1/evidence.jsonl">pair
+ledger</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v1/execution-v1/arms/01-visible-ir-delta-treatment/result.json">treatment
+result</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v1/execution-v1/arms/01-visible-ir-delta-treatment/evaluation/evidence.jsonl">treatment
+ledger</a>, and <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v1/execution-v1/arms/01-visible-ir-delta-treatment/sessions/pids-8de92a07ef0ca429dca43e45e66080c9.jsonl">session</a>.</p>
+<p>Paid-screen v2 used a new namespace, source/runtime closure, random
+draw, attempt lock, and output path. It made three real
+subscription-backed Luna dispatches, two evaluator jobs, and four fresh
+task evaluations with no reuse or duplicates. S12 reproduced
+<code>1,970 / 13,838</code>; after receiving the full treatment trace,
+the model proposed a 25-action candidate that improved both task IR
+counts to <code>1,958 / 13,751</code>. Every admitted task passed all 20
+callbacks. The third response proposed exactly 47 actions. The host
+rejected it before evaluator dispatch under the frozen scientific rule
+requiring <code>1..46</code>, and the next assistant record was a
+locally synthesized zero-usage abort rather than a fourth paid call.</p>
+<p>The sealed v2 pair result retains an obsolete apparatus label because
+the then-current audit counted that synthetic abort as both a provider
+failure and an extra dispatch record. Under the preregistered taxonomy,
+the controlling disposition is terminal scientific-policy
+nonconformance. A read-only replay under the corrected, fail-closed
+future taxonomy preserves the same two candidates and counts while
+returning zero apparatus failures; no sealed byte or hash changes. The
+post-v2 interface now leaves stock behavior at
+<code>maxItems: 256</code> but advertises and locally enforces the
+opt-in screen schema at <code>minItems: 1</code>,
+<code>maxItems: 46</code>; the pre-transport gate rejects any schema or
+strictness mutation. This hardening does not rescue v2 or authorize
+another run. Evidence: <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v2/preregistration.json">v2
+preregistration</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v2/execution-v1/result.json">sealed
+pair result</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v2/execution-v1/evidence.jsonl">pair
+ledger</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v2/execution-v1/arms/01-visible-ir-delta-treatment/result.json">treatment
+result</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v2/execution-v1/arms/01-visible-ir-delta-treatment/evaluation/evidence.jsonl">treatment
+ledger</a>, <a
+href="../../../.autoresearch/compiler-gym-ir-delta-paid-screen/2026-08-28-v2/execution-v1/arms/01-visible-ir-delta-treatment/sessions/pids-2dae545ba160c22de951131b2de035d7.jsonl">session</a>,
+<a href="../src/compiler-gym-ir-delta-screen-runner.ts">future audit
+implementation</a>, <a
+href="../src/compiler-gym-ir-delta-screen-protocol.ts">protocol</a>, <a
+href="../test/compiler-gym-ir-delta-screen-runner.test.ts">audit
+regression</a>, <a
+href="../test/compiler-gym-ir-delta-screen-provider-parity.test.ts">provider-parity
+regression</a>, <a href="../../../STATE.md">campaign state</a>, and <a
+href="../../../results.tsv">experiment log</a>.</p>
+<h2 id="subscription-transport-tools-rlm-and-compaction">Subscription
+transport, tools, RLM, and compaction</h2>
+<h3 id="paid-endpoint-canary">Paid endpoint canary</h3>
+<p>The successful live endpoint canary produced one accepted candidate
+over two verified tasks:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th style="text-align: right;">Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Transport / provider retries</td>
+<td style="text-align: right;">SSE / 0</td>
+</tr>
+<tr>
+<td>Provider calls / blocked calls</td>
+<td style="text-align: right;">4 / 0</td>
+</tr>
+<tr>
+<td>Submit / status failures</td>
+<td style="text-align: right;">0 / 0</td>
+</tr>
+<tr>
+<td>Output / total tokens</td>
+<td style="text-align: right;">607 / 8,975</td>
+</tr>
+<tr>
+<td>Verified tasks</td>
+<td style="text-align: right;">2/2</td>
+</tr>
+</tbody>
+</table>
+<p>Evidence: <a
+href="../../../.autoresearch/cpu-canaries/control-v7-live-endpoint-2026-08-28-v1/result.json">v7
+endpoint canary</a>.</p>
+<p>Two earlier v6 attempts failed before producing candidates because
+the ChatGPT Codex subscription endpoint rejected
+<code>max_output_tokens</code>. The provider now omits that unsupported
+field, checks an abort immediately after
+<code>before_provider_request</code>/payload mutation, and honors an
+explicit zero-retry policy. Provider-call admission is hard-capped
+before transport; token and time ceilings are post-response checkpoints
+and are not presented as hard per-response limits.</p>
+<h3 id="matched-v7-tool-integrity">Matched v7 tool integrity</h3>
+<table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+</colgroup>
+<thead>
+<tr>
+<th>Arm</th>
+<th style="text-align: right;">Provider calls</th>
+<th style="text-align: right;">Submit</th>
+<th style="text-align: right;">Status</th>
+<th style="text-align: right;">Recall</th>
+<th style="text-align: right;">Compaction / sealed check</th>
+<th style="text-align: right;">Deviations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Control</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">3/0</td>
+<td style="text-align: right;">4/0</td>
+<td style="text-align: right;">0/0</td>
+<td style="text-align: right;">1/1</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>M</code></td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">3/0</td>
+<td style="text-align: right;">2/0</td>
+<td style="text-align: right;">2/0</td>
+<td style="text-align: right;">1/1</td>
+<td style="text-align: right;">2 cosmetic</td>
+</tr>
+</tbody>
+</table>
+<p>Every machine-authoritative tool call succeeded. There was no
+duplicate dispatch.</p>
+<h3 id="concise-feedback-host-owned-closure">Concise-feedback host-owned
+closure</h3>
+<p>Both feedback-projection arms completed with four provider calls and
+four evaluator dispatches. The attempted continuation is represented by
+a synthetic zero-token aborted assistant message and an intentional
+host-stop record; it is not a paid provider dispatch. Each arm had zero
+duplicate, reused, blocked, or post-terminal evaluations. The strict
+canonical-ledger verifier independently reconstructed event ordering,
+state transitions, artifacts, budgets, and terminal state.</p>
+<h3 id="rlm-and-restart-continuity">RLM and restart continuity</h3>
+<p>The successful RLM canary demonstrated one child admission, one
+nested evaluator dispatch, child-to-parent receipt delivery, parent
+status and recall, a persisted compaction, separate parent/child usage
+attribution, and zero adapter redispatch after restart. An exact
+duplicate submission returned the same job and manifest as a
+duplicate.</p>
+<p>Evidence: <a
+href="../../../.autoresearch/rlm-live-canary/2026-08-28-v4/result.json">RLM
+v4 result</a> and <a
+href="../../../.autoresearch/durable-canary/2026-08-27T22-50-00Z/result.json">durable
+canary</a>.</p>
+<p>Conclusion: core typed-tool dispatch and sealed v7 compaction are
+clean enough for further experiments. Generic compaction is not
+automatically an experimental isolation boundary; the summary itself can
+retain measurements. Isolation requires the sealed-summary check or an
+equivalent policy. Prime’s public API also does not expose separate
+compaction-token accounting. IR-delta paid-screen v2 separately exposed
+an opt-in contract mismatch: its provider schema still advertised stock
+<code>maxItems: 256</code> while the prompt and host enforced 46. The
+future screen schema and pre-transport gate now bind <code>1..46</code>;
+that post hoc repair does not alter v2.</p>
+<p>The later late-novelty v2 screen adds narrower evidence: one exact
+subscription-backed tool call was parsed and dispatched once before the
+evaluator failed. This validates that first tool-routing round trip
+only, not a complete four-call trajectory. Compaction was disabled by
+that screen’s frozen isolation contract, so compaction correctness
+remains supported by the earlier sealed canaries rather than the
+late-novelty attempt. Its missing raw evaluator streams also motivated
+the prospective typed-error path: models see only sanitized failure
+text, while host-only run manifests retain raw bytes by digest.</p>
+<h2 id="deterministic-verified-measurement-reuse">Deterministic
+verified-measurement reuse</h2>
+<p>The controller now has an optional adapter-owned reuse contract for
+deterministic CompilerGym measurements:</p>
+<ul>
+<li>same ledger and branch;</li>
+<li>a completed fresh source only;</li>
+<li>exact candidate digest, sorted task set, lane, budget class,
+candidate format, verifier epoch, hardware, and provenance;</li>
+<li>source job, manifest, measurement digest, and immutable
+measurement-event hash recorded on reuse;</li>
+<li>only declared objective metrics and verifier verdict cloned;</li>
+<li>timing, queue metrics, stdout, and stderr never inherited;</li>
+<li>logical budgets remain charged while actual/reused/unevaluated task
+counts are separate;</li>
+<li>confirmation jobs and host-side <code>requireFreshMeasurement</code>
+force a fresh evaluation;</li>
+<li>KernelBench and NanoGPT do not opt in.</li>
+</ul>
+<p>The agent-facing tools do not expose
+<code>requireFreshMeasurement</code>, so the model cannot manipulate
+causal resource accounting. A pinned CompilerGym adapter opts in only
+when its verifier, environment, hardware, and provenance contract match.
+Under concurrency, a duplicate whose source is still running evaluates
+fresh; the implementation does not claim cross-process single-flight
+behavior.</p>
+<p>The focused reuse suite passed 5/5 cases, including required misses
+and restart behavior. The historical current-v2 R ledger contains an
+exact repeated candidate; shadow accounting would reduce 8 logical task
+evaluations to 6 physical plus 2 reused, a 25% physical-evaluation
+reduction with the same conclusion. This is a retrospective
+infrastructure estimate, not an observed treatment effect.</p>
+<p>Source and contracts: <a
+href="../src/controller.ts"><code>controller.ts</code></a>, <a
+href="../src/compiler-gym-adapter.ts"><code>compiler-gym-adapter.ts</code></a>,
+and <a
+href="../test/measurement-reuse.test.ts"><code>measurement-reuse.test.ts</code></a>.</p>
+<h2 id="gpu-lane-qualification">GPU-lane qualification</h2>
+<h3 id="shared-capacity-and-asynchronous-progress">Shared capacity and
+asynchronous progress</h3>
+<p>The controller now enforces a default maximum of four aggregate
+running jobs across the KernelBench and NanoGPT lanes, while each lane
+retains its own limit and CompilerGym remains independent. A local faux
+regression started three KernelBench jobs and one NanoGPT job, held a
+fifth NanoGPT job in <code>accepted</code>, completed a CPU job while
+all four GPU permits were occupied, then admitted the fifth after one
+KernelBench completion. All six jobs produced one unique measurement
+record and the strict ledger reverified; a configured aggregate limit
+above four is rejected.</p>
+<p>This is operational apparatus evidence, not cluster utilization or
+GPU-transfer evidence. The bound is per controller process and assumes
+the current one-GPU-per-job contract; Slurm QoS remains authoritative
+across concurrent processes and live users. Source and test: <a
+href="../src/controller.ts">controller</a> and <a
+href="../test/multi-lane-controller.test.ts">multi-lane
+regression</a>.</p>
+<p>The <code>2026-08-28 20:47–20:50 PDT</code> scheduler snapshot found
+13/24 L40S devices physically unallocated but an approximately
+eight-hour <code>srun --test-only</code> wait, while a small CPU request
+was immediately schedulable. That observation explains why CPU remains
+the synchronous lane and GPUs remain queued validation lanes. It is
+explicitly time-sensitive and was not promoted to a sealed experiment
+artifact.</p>
+<h3 id="kernelbench-verified">KernelBench-Verified</h3>
+<p>One fixed compiled candidate qualified the FarmShare L40S correctness
+and timing path:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th style="text-align: right;">Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Positive hidden configurations passed</td>
+<td style="text-align: right;">4/4</td>
+</tr>
+<tr>
+<td>Wrong candidate rejected</td>
+<td style="text-align: right;">4/4</td>
+</tr>
+<tr>
+<td><code>fastAtOne</code></td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td>Reference mean</td>
+<td style="text-align: right;">52.295 ms</td>
+</tr>
+<tr>
+<td>Positive warm mean</td>
+<td style="text-align: right;">16.680 ms</td>
+</tr>
+<tr>
+<td>Observed speedup</td>
+<td style="text-align: right;">3.13525x</td>
+</tr>
+<tr>
+<td>Cold compile</td>
+<td style="text-align: right;">5,421 ms</td>
+</tr>
+<tr>
+<td>SLURM job</td>
+<td style="text-align: right;">1701019</td>
+</tr>
+</tbody>
+</table>
+<p>Evidence: <a
+href="../../../.autoresearch/kernelbench-compiled-qualification/2026-08-28-v5-recovered/evidence.jsonl">KernelBench
+qualification ledger</a>.</p>
+<p>This qualifies compilation, hidden correctness configurations, timing
+capture, and wrong-answer rejection. The candidate was fixed and
+allowlisted, <code>usesModelApi=false</code>, and acceptance was
+correctness-only. It is not a Prime Agent treatment-transfer result.</p>
+<h3 id="nanogpt">NanoGPT</h3>
+<p>Two completed NanoGPT artifacts have different contracts and must not
+be pooled.</p>
+<p>The historical pinned public speedrun fixture completed an unscored
+one-L40S infrastructure smoke:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th style="text-align: right;">Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Effective optimizer steps</td>
+<td style="text-align: right;">10</td>
+</tr>
+<tr>
+<td>Backward calls</td>
+<td style="text-align: right;">80</td>
+</tr>
+<tr>
+<td>Seed</td>
+<td style="text-align: right;"><code>0xC0FFEE</code> / 12,648,430</td>
+</tr>
+<tr>
+<td>Mean validation loss</td>
+<td style="text-align: right;">6.48509</td>
+</tr>
+<tr>
+<td>Peak VRAM</td>
+<td style="text-align: right;">29,634 MB</td>
+</tr>
+<tr>
+<td>GPU</td>
+<td style="text-align: right;">NVIDIA L40S</td>
+</tr>
+<tr>
+<td>Source integrity before/after</td>
+<td style="text-align: right;">Stable</td>
+</tr>
+<tr>
+<td>Record/scored eligible</td>
+<td style="text-align: right;">No / no</td>
+</tr>
+<tr>
+<td>SLURM job</td>
+<td style="text-align: right;">1701170</td>
+</tr>
+</tbody>
+</table>
+<p>Evidence: <a
+href="../../../.autoresearch/nanogpt-farmshare-smoke/2026-08-28-v1-sealed/result.json">NanoGPT
+smoke result</a> and <a
+href="../../../.autoresearch/nanogpt-farmshare-smoke/2026-08-28-v1-sealed/evidence.jsonl">strict
+evidence ledger</a>.</p>
+<p>That artifact’s own claim scope forbids quality, score, or record
+claims. It proves only that its frozen source, smoke-data contract, CUDA
+execution, logging, and integrity checks worked.</p>
+<p>The production path separately ran the byte-exact stock candidate
+through verifier epoch
+<code>nanogpt-scored-v1-ec824abe9c0ec43a5645afdb</code>, which binds the
+static evaluator, environment manifest and seal, 19-file dataset,
+worker, transport, and prospective campaign amendment:</p>
+<table>
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr>
+<th>Metric</th>
+<th style="text-align: right;">Production scored-apparatus smoke</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mode / eligibility</td>
+<td style="text-align: right;"><code>smoke-10</code>; unscored,
+frontier-ineligible, record-ineligible</td>
+</tr>
+<tr>
+<td>Effective optimizer steps</td>
+<td style="text-align: right;">10/10</td>
+</tr>
+<tr>
+<td>Seed</td>
+<td style="text-align: right;"><code>0xC0FFEE</code> / 12,648,430</td>
+</tr>
+<tr>
+<td>Final validation loss</td>
+<td style="text-align: right;"><code>6.485082150</code></td>
+</tr>
+<tr>
+<td>Peak VRAM</td>
+<td style="text-align: right;"><code>29,634.344 MB</code></td>
+</tr>
+<tr>
+<td>GPU / world size</td>
+<td style="text-align: right;">NVIDIA L40S / 1</td>
+</tr>
+<tr>
+<td>CPU request / allocation</td>
+<td style="text-align: right;">8 requested / 10 allocated
+(<code>ReqTRES cpu=8</code>; <code>AllocTRES cpu=10</code>)</td>
+</tr>
+<tr>
+<td>Source integrity before/after</td>
+<td style="text-align: right;">Stable</td>
+</tr>
+<tr>
+<td>Slurm job / terminal state</td>
+<td style="text-align: right;"><code>1703802</code> /
+<code>COMPLETED/0:0</code></td>
+</tr>
+</tbody>
+</table>
+<p>Request
+<code>826a1cb90d9523b4c5342cba7a6a706d70710e2489e121302cba102e33781bb9</code>,
+result
+<code>6a9a465282037d80bdf19420f2e9bbde49b197181a21daf3bec4b0a51a29f880</code>,
+and receipt
+<code>dbf0d16fa9ce34ac8059e9113e3028eb34eda1c34ffbe9d5fc72bd2e165f6af4</code>
+reverified through a fresh live reconcile without redispatch. Immutable
+evidence: <a
+href="../../../.autoresearch/nanogpt-scored/stock-v1/scored-state/slots/1d/1db424157a830859145611f1817558810ebe9d972b455bb282c05559067b003f/smoke-10.json">completed
+smoke slot</a>, <a
+href="../../../.autoresearch/nanogpt-scored/stock-v1/scored-state/artifacts/sha256/6a/9a465282037d80bdf19420f2e9bbde49b197181a21daf3bec4b0a51a29f880">content-addressed
+result</a>, and <a
+href="../../../.autoresearch/nanogpt-scored/stock-v1/transport-evidence/82/826a1cb90d9523b4c5342cba7a6a706d70710e2489e121302cba102e33781bb9/manifest.json">archived-log
+manifest</a>. The growing controller ledger is intentionally not a
+report-bundle input while the next stage is pending.</p>
+<p>The historical frozen campaign declaration remains immutable at
+SHA-256
+<code>31f6b78ac5c5ccb87a471e61bbad46e1f0d1b1c892eb7c678c1e8f5a8e02e2f4</code>
+with widening schedule <code>[1,2,4,8]</code>. Before the first scored
+dispatch, prospective amendment
+<code>0aece581a2cc9e49672f598129a9f298353114368962a4fca0e09b0f7e9751ab</code>
+defined a separate unscored <code>smoke-10</code> gate followed by
+scored stages <code>[1,3,8]</code> (<code>score-1</code>,
+<code>score-3</code>, <code>replay-8</code>). It changes only interim
+widening, preserves the final eight-seed decision rule, forbids
+historical reclassification, and forbids cross-protocol aggregation.</p>
+<p>Full score-1 job <code>1703804</code> is pending. No loss, threshold
+verdict, score-3 authorization, or frontier point may be inferred from
+submission or scheduler state.</p>
+<h2 id="why-no-gpu-treatment-run-or-nanogpt-frontier-is-shown">Why no
+GPU treatment run or NanoGPT frontier is shown</h2>
+<p>The causal ladder is:</p>
+<pre class="text"><code>runtime integrity -&gt; immutable verification -&gt; CPU treatment advantage
+                  -&gt; GPU transfer -&gt; NanoGPT confirmation</code></pre>
+<p>The first two stages passed; the CPU treatment stage did not. The
+three lanes form this funnel: CompilerGym screens harness mechanics
+quickly, KernelBench can stress GPU transfer and verification after
+promotion, and NanoGPT alone confirms the target Track 3 estimand. GPU
+lane readiness cannot override that gate or substitute one benchmark’s
+score for another.</p>
+<p>A scored NanoGPT frontier cannot be reconstructed from current
+evidence. The production scored adapter and full stock recipe exist, and
+the candidate-specific smoke passed, but the one-seed full score remains
+pending. There is no completed threshold verdict, score-3 screen,
+treatment candidate, or eight-seed replay, so there are zero eligible
+time, token, evaluator-call, or GPU-hour frontier points. Drawing a
+curve would imply evidence that does not exist.</p>
+<h2 id="figures">Figures</h2>
+<p>The two tasks remain separate; there is no cross-task scalar
+headline.</p>
+<figure>
+<img src="../../../.autoresearch/cpu-analysis/v7/frontier-blowfish.svg"
+alt="Sealed v7 blowfish frontier" />
+<figcaption aria-hidden="true">Sealed v7 blowfish frontier</figcaption>
+</figure>
+<figure>
+<img src="../../../.autoresearch/cpu-analysis/v7/frontier-bzip2.svg"
+alt="Sealed v7 bzip2 frontier" />
+<figcaption aria-hidden="true">Sealed v7 bzip2 frontier</figcaption>
+</figure>
+<p>Primary analysis: <a
+href="../../../.autoresearch/cpu-analysis/v7/report.md">v7 report</a>,
+<a
+href="../../../.autoresearch/cpu-analysis/v7/analysis-manifest.json">manifest</a>,
+<a href="../../../.autoresearch/cpu-analysis/v7/runs.csv">runs</a>, <a
+href="../../../.autoresearch/cpu-analysis/v7/contrasts.csv">contrasts</a>,
+and <a
+href="../../../.autoresearch/cpu-analysis/v7/frontier.csv">frontier</a>.</p>
+<p>Exploratory sensitivity: <a
+href="../../../.autoresearch/cpu-analysis/v5/interim-report.md">v5
+report</a>, <a
+href="../../../.autoresearch/cpu-analysis/v5/frontier-blowfish.svg">blowfish
+figure</a>, and <a
+href="../../../.autoresearch/cpu-analysis/v5/frontier-bzip2.svg">bzip2
+figure</a>.</p>
+<h2 id="source-audit">Source audit</h2>
+<p>The 22-entry source index contains 21 unique works. The literature
+most strongly supports verifier separation and measured evidence. It
+supports conditional-negative recall and interaction re-probes as
+observations, not as proven causal additions. Dense communication and
+asynchronous shared memory papers measure different outcomes; sparse
+measured-summary sharing remains an untested synthesis. Tang-Yang and
+SimpleTES changed materially between revisions. Heuresis is not
+comparable to Prime Track 3.</p>
+<p>The complete claim-by-claim audit, version drift, contradictions, and
+all 22 dispositions are available as <a
+href="source-evidence-v1.md">Markdown</a> and <a
+href="source-evidence-v1.html">HTML</a>.</p>
+<h2 id="validation-completed">Validation completed</h2>
+<table>
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr>
+<th>Validation</th>
+<th style="text-align: right;">Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI Codex provider focused suite</td>
+<td style="text-align: right;">19/19 passed</td>
+</tr>
+<tr>
+<td>Coding-agent pre-dispatch abort regression</td>
+<td style="text-align: right;">1/1 passed</td>
+</tr>
+<tr>
+<td>Sealed compaction tests</td>
+<td style="text-align: right;">2/2 passed</td>
+</tr>
+<tr>
+<td>Analysis selector tests</td>
+<td style="text-align: right;">4/4 passed</td>
+</tr>
+<tr>
+<td>Measurement reuse tests</td>
+<td style="text-align: right;">5/5 passed</td>
+</tr>
+<tr>
+<td>Sidecar controller tests</td>
+<td style="text-align: right;">16/16 passed, including sanitized
+model-visible failures plus host-only raw error artifacts</td>
+</tr>
+<tr>
+<td>Combined-ledger and shared-capacity multi-lane controller
+regressions</td>
+<td style="text-align: right;">3/3 passed, including aggregate four-job
+gating and exact-once delayed merge</td>
+</tr>
+<tr>
+<td>R resurrection qualification tests</td>
+<td style="text-align: right;">7/7 passed</td>
+</tr>
+<tr>
+<td>Host-owned terminalization tests</td>
+<td style="text-align: right;">5/5 passed</td>
+</tr>
+<tr>
+<td>Stock-interface parity tests</td>
+<td style="text-align: right;">6/6 passed</td>
+</tr>
+<tr>
+<td>Whole-Pareto comparator tests</td>
+<td style="text-align: right;">7/7 subtests passed</td>
+</tr>
+<tr>
+<td>Feedback-projection analysis tests</td>
+<td style="text-align: right;">3/3 passed</td>
+</tr>
+<tr>
+<td>CompilerGym latency reconstruction tests</td>
+<td style="text-align: right;">5/5 passed</td>
+</tr>
+<tr>
+<td>Warm transport matched gate</td>
+<td style="text-align: right;">Exact semantic/accounting parity;
+negative latency decision</td>
+</tr>
+<tr>
+<td>C1 v2 sealed faux/fault suite</td>
+<td style="text-align: right;">53/53 passed</td>
+</tr>
+<tr>
+<td>C1 v2 sealed dispatch</td>
+<td style="text-align: right;">Terminal post-submit failure; one held
+root; zero candidate, task, model, CPU-allocation, or GPU work</td>
+</tr>
+<tr>
+<td>C1 v2 native cleanup recovery</td>
+<td style="text-align: right;">Failed closed on the same frozen
+<code>NumNodes=1-1</code> parser assertion</td>
+</tr>
+<tr>
+<td>Exact external root cleanup</td>
+<td style="text-align: right;">Verified absent and
+<code>CANCELLED/0:0</code>; <code>AllocCPUS=0</code>,
+<code>ElapsedRaw=0</code>, <code>CPUTimeRAW=0</code></td>
+</tr>
+<tr>
+<td>IR-delta formal qualification</td>
+<td style="text-align: right;">8/8 fresh allocations passed exact
+metric, verifier, trace, projection, and overhead gates</td>
+</tr>
+<tr>
+<td>Paid IR-delta screen suite</td>
+<td style="text-align: right;">53/53 passed across adapter, faux E2E,
+model gate, preregistration, protocol, provider parity, runner, and
+stock-interface tests</td>
+</tr>
+<tr>
+<td>Late-novelty paid-screen suite</td>
+<td style="text-align: right;">41/41 passed, including live-gate
+ordering, zero-dispatch failure, isolated attempt-lock, and sealed
+source-closure checks</td>
+</tr>
+<tr>
+<td>Sealed v1 numeric replay</td>
+<td style="text-align: right;">Exact valid aggregate accepted;
+representation, hash, schema, and trace mutations fail closed</td>
+</tr>
+<tr>
+<td>Sealed v2 future-taxonomy replay</td>
+<td style="text-align: right;">Scientific-policy nonconformance; zero
+apparatus failures; 3 provider dispatches, 2 evaluator jobs, 4 fresh
+task evaluations</td>
+</tr>
+<tr>
+<td>Late structural-novelty headroom</td>
+<td style="text-align: right;">7/7 passed; exact 21-ledger input, 14
+transitions, deterministic output, and fail-closed drift checks</td>
+</tr>
+<tr>
+<td>IR-delta and late-novelty faux E2E</td>
+<td style="text-align: right;">2/2 passed; bounded treatment field
+reached only call four and raw artifacts matched</td>
+</tr>
+<tr>
+<td>Root <code>npm run check</code></td>
+<td style="text-align: right;">Passed: formatting, root types, sidecar
+types, installer, browser smoke</td>
+</tr>
+<tr>
+<td>FarmShare zero-model recovery v3</td>
+<td style="text-align: right;">Local result passed the frozen
+operational environment seal and 20/20 callbacks; external
+<code>sacct</code> reported Slurm <code>1703328</code>
+<code>COMPLETED/0:0</code></td>
+</tr>
+<tr>
+<td>Durable home-bundle regression</td>
+<td style="text-align: right;">5/5 passed locally; contemporaneous
+unsealed remote output reported <code>EDQUOT</code> before staging</td>
+</tr>
+<tr>
+<td>Complete-action-space protocol and runner suites</td>
+<td style="text-align: right;">TypeScript 12/12 and Python evaluator 8/8
+passed; root check remained clean</td>
+</tr>
+<tr>
+<td>Complete-action-space live attempt</td>
+<td style="text-align: right;">V1 zero dispatch; v2 one CPU allocation,
+raw assessor-valid headroom signal, native terminal accounting
+rejection, cleanup proved, no admitted result</td>
+</tr>
+<tr>
+<td>Action-guide visibility protocol, guard, runner, preregistration,
+and adapter suites</td>
+<td style="text-align: right;">41/41 passed, including both sampled
+orders, shared-S12 fail-closed behavior, exact blocked continuations,
+six-allocation uniqueness, policy/apparatus classification, provider
+parity, and terminal decision rules</td>
+</tr>
+<tr>
+<td>Action-guide visibility live pair</td>
+<td style="text-align: right;">Shared S12 passed; 2/2 arm candidates
+verified; 2 paid calls, 2 tool executions, 6 unique CPU allocations, and
+2 exact zero-use blocked continuations; terminal
+<code>directional-loss</code></td>
+</tr>
+<tr>
+<td>Proxy-cascade replay and production-default qualification suite</td>
+<td style="text-align: right;">53/53 focused tests passed; sealed replay
+<code>--check</code> passed</td>
+</tr>
+<tr>
+<td>Proxy-cascade live model-free wiring audit</td>
+<td style="text-align: right;">8/8 fresh unique allocations; 24/24 Slurm
+rows <code>COMPLETED/0:0</code>; frontier <code>[3]</code> and champion
+3 retained; zero retries/reuse/model/provider/RLM/GPU</td>
+</tr>
+<tr>
+<td>Counterbalanced proxy-cascade resource protocol, preregistration,
+runner, and adapter suite</td>
+<td style="text-align: right;">37/37 focused tests passed, including
+exact AB/BA scheduling, timing boundaries, fresh selection sealing,
+failure containment, budget terminalization, and source preparation</td>
+</tr>
+<tr>
+<td>Counterbalanced proxy-cascade resource screen</td>
+<td style="text-align: right;">28/28 fresh unique allocations; 84/84
+root/extern/step rows terminal <code>COMPLETED/0:0</code>; eight seals,
+ten locks, maximum concurrency two; both AB/BA blocks passed every
+frozen resource and equivalence gate</td>
+</tr>
+<tr>
+<td>Paid proxy-cascade focused matrix</td>
+<td style="text-align: right;">60/60 passed across protocol,
+preregistration, provider, AgentSession, runner, adapter, qualification,
+and late-novelty compatibility suites</td>
+</tr>
+<tr>
+<td>Paid proxy-cascade live campaign</td>
+<td style="text-align: right;">V1 and v2 terminal apparatus-invalid; v2
+ran 16 physical allocations but durably admitted only 14 online
+measurements; <code>assessment=null</code>, scientific eligibility
+false, campaign closed with no v3</td>
+</tr>
+<tr>
+<td>Repaired proxy-cascade live apparatus qualification</td>
+<td style="text-align: right;">2/2 overlapping zero-model jobs
+<code>1703787/1703788</code> passed exact root/extern/step accounting
+and 20/20 semantic callbacks; no provider or session calls</td>
+</tr>
+<tr>
+<td>NanoGPT scored TypeScript suite</td>
+<td style="text-align: right;">32/32 passed across protocol, amendment,
+dataset, stock driver, adapter, and durable transport behavior</td>
+</tr>
+<tr>
+<td>NanoGPT scored Python worker suite</td>
+<td style="text-align: right;">12/12 passed under each tested Python 3
+and Python 3.12 runtime</td>
+</tr>
+<tr>
+<td>Production NanoGPT stock smoke</td>
+<td style="text-align: right;">Slurm <code>1703802</code> passed exact
+request/result/receipt, source, scheduler, hardware, step, log, and
+one-dispatch recovery checks; eight CPUs requested and ten
+allocated</td>
+</tr>
+<tr>
+<td>Generated v7 output hashes</td>
+<td style="text-align: right;">Matched analysis manifest</td>
+</tr>
+<tr>
+<td>R qualification artifact references</td>
+<td style="text-align: right;">12/12 matched content digests</td>
+</tr>
+<tr>
+<td>Feedback pair artifact references</td>
+<td style="text-align: right;">24/24 logical references matched hashes
+and lengths</td>
+</tr>
+</tbody>
+</table>
+<p>No live credential is stored in the sidecar or FarmShare artifact.
+OAuth remains on the Mac. FarmShare queue state is live and may drift;
+the <code>2026-08-28 20:47–20:50 PDT</code> capacity observation is not
+a sealed result. C1 reached its terminal parser failure after
+authentication and preflight succeeded, before any allocation began.</p>
+<p>The report bundle and headline evidence files are pinned in <a
+href="campaign-v1.sha256"><code>campaign-v1.sha256</code></a>.</p>
+<h2 id="threats-to-validity">Threats to validity</h2>
+<ul>
+<li>One root trajectory per arm cannot estimate policy variance;
+subscription trajectories are not seedable.</li>
+<li>Stock and sidecar runs differ in prompt, action guide, tool
+interface, and evaluation depth.</li>
+<li>V5 <code>M</code> is not an isolated compaction treatment; only
+sealed v7 is used for the primary claim.</li>
+<li>V7 had monotonic successful candidates and little
+conditional-failure evidence for <code>M</code> to exploit.</li>
+<li>Two search tasks and one held-out task do not establish broad
+compiler generalization.</li>
+<li>LLVM IR instruction count is a proxy; the stock IR champion
+increased object text size.</li>
+<li>Only provider-call count is a hard pre-dispatch budget. Output and
+time are checkpointed after responses.</li>
+<li>Requested <code>priority</code> was locally effective configuration
+but not acknowledged by the upstream response.</li>
+<li>The stock evaluator boundary was checked post hoc and was not an OS
+sandbox.</li>
+<li>KernelBench used one fixed task and candidate. Both completed
+NanoGPT artifacts are one-seed, ten-step apparatus smokes; the
+production smoke is candidate-specific under the scored verifier but
+says nothing about the full 3,290-step threshold. Score-1 job
+<code>1703804</code> remains pending/non-evidence.</li>
+<li>The aggregate four-job GPU cap is an in-process controller invariant
+under the current one-GPU-per-job assumption. It does not reserve
+cluster capacity, coordinate separate controller processes, or supersede
+Slurm QoS.</li>
+<li>The late-novelty reconstruction is development-informed and
+underpowered: its one-sided Fisher sensitivity is approximately
+<code>0.143</code>, only 14/21 ledgers contribute, and the protocol mix,
+deliberate negative diagnostics, and first-parent binding can change the
+apparent direction. Dice-LCS similarity is descriptive, not causal.</li>
+<li>The four-call late-novelty result uses a faux provider and
+deterministic evaluator only. Exact prompt isolation does not imply a
+live model will follow the guidance or improve the frontier.</li>
+<li>The late-novelty paid v2 trajectory contains one paid dispatch and
+no accepted measurement or control arm, so it cannot estimate guidance
+effect. Compaction was disabled and is not revalidated by this
+attempt.</li>
+<li>The v2 adapter did not retain the underlying failed evaluator
+stdout/stderr. Later diagnostics strongly implicate filesystem loss, but
+cannot prove that <code>1703304</code> had the same immediate error or
+reconstruct its missing bytes.</li>
+<li>The recovered CompilerGym payload remains on scratch. Its exact v3
+seal is time-local; package metadata alone did not detect removed Gym,
+compatibility, bitcode, or runtime files, and nightly cleanup is
+inferred rather than directly observed.</li>
+<li>The environment probe is a frozen operational seal over declared
+manifests and imports, not a byte-complete hash of every installed
+Python file. Contemporaneous unsealed remote output reported a quota
+failure before home staging, so future paid work still depends on the
+recovered scratch payload and a fresh same-path probe.</li>
+<li>The complete-action-space observation is not admitted evidence. It
+uses one dijkstra scaffold, one insertion point, and single-flag
+marginal additions; dijkstra is held out only from the sealed
+development cohort, not the entire campaign. The scaffold baseline was
+raw-IR-only, and the 20 callbacks are a benchmark semantic check rather
+than formal equivalence. Combinations, other positions, and other tasks
+remain unknown.</li>
+<li>The root accounting mismatch was caused by the memory-per-CPU and
+whole-core scheduler policy rather than evaluator parallelism, but that
+explanation is post-attempt and cannot waive an exact preregistered
+topology field. Treating the raw payload as a verified result would be
+post hoc contract relaxation.</li>
+<li>The action-guide visibility result is one unseedable, sampled-order
+first-proposal pair. Its local entropy draw had no external commitment
+or tamper-evident assignment, so randomized inference and causal claims
+are explicitly disallowed. Control dominance stops the preregistered
+pilot but does not estimate general harm from a full action guide.</li>
+<li>The visibility treatment changed guide length and therefore context
+cost as part of the estimand. It uniquely used 19 omitted-guide flags,
+but one candidate per arm cannot distinguish which flag choices or
+prompt-length effects caused the observed vectors.</li>
+<li>Compaction, RLM children, and web access were disabled for the
+visibility isolation. Its clean one-tool-per-arm routing and exact
+zero-use blocked continuations do not independently revalidate
+compaction or child-agent continuity; those remain supported by the
+earlier sealed canaries.</li>
+<li>The proxy-cascade replay selected its policy retrospectively on the
+same 13-trajectory cohort, and later candidates had already observed
+bzip2 feedback. Its summed evaluator-runtime reduction is not feedback
+latency. The live qualification audited all eight tasks and therefore
+observed no six-allocation compute or time saving; it establishes
+production-default wiring only.</li>
+<li>The counterbalanced resource screen uses two blocks over one fixed
+four-candidate batch on FarmShare CPU. Its measured wall interval
+includes the online Slurm and adapter path, while environment
+preparation and admission probes are intentionally outside the timer;
+evaluator-step CPU excludes root and extern reservation accounting.
+AB/BA order controls one obvious nuisance but does not estimate broader
+scheduler, candidate, workload, or agent-policy variance.</li>
+<li>The resource screen had no model, tool, compaction, RLM, GPU, or
+adaptive proposal loop. Its positive schedule result cannot establish
+that delayed bzip2 feedback preserves or improves Luna search behavior.
+The subsequent paid v1/v2 campaign did not supply scientific evidence
+and is closed under its second-apparatus-failure rule.</li>
+<li>V2’s two hidden evaluator steps physically completed, but their
+measurements, raw streams, external IDs, and terminal failure states
+were not durably admitted by the frozen runner. Later read-only
+<code>sacct</code> proves scheduler completion and isolates the adapter
+defect; it cannot reconstruct the missing treatment frontier or convert
+the 14 online observations into a comparison.</li>
+<li>The repaired live qualification comprises two fixed, model-free
+bzip2 jobs. It validates role-correct accounting and failure-provenance
+mechanics only; it neither exercises a paid pair nor authorizes
+one.</li>
+<li>Measurement reuse has automated contract evidence and retrospective
+shadow accounting, not a live causal campaign result.</li>
+<li>The R qualifier predates the new actual/reused budget fields and its
+run manifest does not pin the controller source hash; its ledger and
+referenced artifacts remain independently valid.</li>
+<li>The stock-versus-typed screen has three valid, unseedable pairs and
+remains an exploratory directional result, not a noninferiority
+test.</li>
+<li>The concise-feedback result is one randomized, unseedable pair. Its
+preregistered failure stops the pilot but cannot estimate causal
+harm.</li>
+<li>The feedback-byte headline includes the fourth result, which is
+stored but cannot condition a later proposal because the host stops
+before another provider call. The first-three sensitivity gives the same
+compression decision.</li>
+<li>Both sealed arm-local feedback preregistrations inherited legacy
+five-call fields. The earlier controlling pair preregistration and
+observed host runtime fixed four calls; the discrepancy is disclosed,
+the artifacts remain immutable, and the future generator is
+corrected.</li>
+<li>There is no replicated paired statistical test.</li>
+<li>FarmShare availability is live state and can drift.</li>
+<li>C1 v2 failed on an overly strict representation assertion: the
+frozen runtime accepted only <code>NumNodes=1</code>, while this Slurm
+version emitted the semantically exact range <code>1-1</code>. External
+cleanup is separately attested because native recovery shared the same
+parser path. Neither the known repair nor the external attestation can
+alter the terminal disposition.</li>
+<li>The C1 v2 runtime trusted the local filesystem, and static imports
+executed before seal verification. Its source closure remained frozen
+through the terminal attempt and native recovery.</li>
+<li>Paid-screen v1 stopped before treatment feedback became
+model-visible, so its valid S12 measurement says nothing about search
+benefit.</li>
+<li>Paid-screen v2 is one unseedable, treatment-first trajectory. Its
+adaptive 25-action improvement is descriptive only; the 47-action policy
+failure prevented a control arm and therefore any trace-effect
+comparison.</li>
+<li>The screen-specific <code>1..46</code> tool schema and exact
+pre-transport binding were added after v2. They prevent that interface
+contradiction in future code but cannot be used to reinterpret or repeat
+the sealed experiment.</li>
+<li>The campaign worktree remains uncommitted, so current local bytes
+are not yet recoverable from a repository commit.</li>
+</ul>
+<h2 id="explicitly-unrun-gates">Explicitly unrun gates</h2>
+<ul>
+<li>24-hour stock Prime NanoGPT trajectory;</li>
+<li>a completed one-seed full stock threshold result; job
+<code>1703804</code> is pending and not evidence;</li>
+<li>score-3 and replay-8 execution, including the eight-seed stock
+replay;</li>
+<li>any agent-facing GPU treatment transfer;</li>
+<li>KernelBench treatment subset;</li>
+<li>full NanoGPT treatment run;</li>
+<li>matched 24-hour confirmations and exact paired significance
+testing;</li>
+<li>NanoGPT time, token, evaluator-call, and GPU-hour frontiers;</li>
+<li><code>S</code> sparse sharing;</li>
+<li>concise-feedback replication or GPU transfer, because its quality
+kill fired;</li>
+<li>the C1–C4 job-step screen, because the one allowed C1 attempt failed
+terminally;</li>
+<li>the hidden-control arm and pair comparison for paid IR-delta
+feedback, because v2’s randomized first arm terminated on scientific
+policy;</li>
+<li>completion, control, or replication of the terminal late-novelty
+paid screen; v1 and v2 are locked historical apparatus outcomes and
+cannot be rerun;</li>
+<li>replication, causal confirmation, interaction testing, or
+GPU/NanoGPT transfer of the completed stock-26 versus full-124
+visibility pair; its directional-loss stop rule fired;</li>
+<li>any admissible agent-facing proxy-cascade comparison or replication;
+paid v1/v2 ran but closed apparatus-invalid before assessment, and no v3
+is permitted;</li>
+<li>a harness-feature interaction pilot, because fewer than two features
+promoted.</li>
+</ul>
+<p>Except for job <code>1703804</code>, these gates are unrun. Job
+<code>1703804</code> is pending compute, not pending success, and
+contributes no claim until its result and receipt reconcile
+successfully.</p>
+<h2 id="next-falsifiable-gate">Next falsifiable gate</h2>
+<p>Reconcile exact score-1 job <code>1703804</code> before widening.
+Proceed to <code>score-3</code> only if its accepted mean loss is
+strictly below <code>3.27859</code>. The historical
+<code>[1,2,4,8]</code> declaration remains immutable; prospective scored
+execution follows the hash-bound <code>[1,3,8]</code> amendment.</p>
+<p>Do not spend another model trajectory on concise feedback or warm
+transport; both declared kill rules fired. Per-candidate task fusion is
+closed by the historical latency audit, and broad Pareto-summary
+injection is closed by its <code>3/21</code> headroom failure. Do not
+rerun, replace, or supersede C1 v2: its single post-submit attempt is
+terminal, candidate-scoped job-step transport is killed, and C1–C4 is
+closed. Do not rerun, rewrite, or present either paid IR-delta attempt
+as a completed pair: v1 is terminal apparatus evidence and v2 is
+terminal scientific-policy evidence.</p>
+<p>Parser hardening can be tested as a future correctness repair by
+accepting only semantically exact one-node encodings such as
+<code>1</code> and <code>1-1</code> while rejecting wider ranges. That
+repair cannot modify the frozen execution or justify repeating its
+hypothesis.</p>
+<p>The bounded screen tool schema is a future correctness repair, not a
+v3 retry license. Never rerun, rewrite, append to, or present
+late-novelty paid v1 or v2 as a completed pair. V1 is terminal
+pre-provider setup evidence; v2 is terminal treatment-first apparatus
+evidence with one paid tool call, no accepted measurement, and no
+control. Neither supports promotion.</p>
+<p>Any further paid campaign experiment must test a genuinely different
+hypothesis under a new preregistration, namespace, source/runtime
+closure, random draw, attempt lock, and output path. It first needs one
+successful zero-model Slurm smoke under the same frozen environment;
+prospective runner/preregistration v2 then executes and records the
+same-path read-only login-node probe before every provider transport.
+Static package-version metadata is insufficient. Moving the versioned
+environment out of cleanup-prone scratch or adding deterministic rebuild
+remains a prerequisite for durable overnight work. Until one
+agent-facing CPU feature passes its promotion gate, KernelBench and
+NanoGPT treatment lanes remain gated. A defensible stopping outcome is
+the current negative result: no tested harness feature beat stock Prime
+Agent.</p>
+<p>Do not rerun or reinterpret complete-action-space v2. Its native
+terminal accounting rejection is final. The non-admitted raw signal
+supported exactly one new exploratory stock-26 versus full-124
+prompt-visibility pair after a separately reviewed preregistration bound
+prompt-only isolation, equal candidate/evaluator budgets, the same-path
+live environment gate before every paid dispatch, one-task step
+accounting, memory-driven root reservation, strict raw artifacts, and
+exact-once locks.</p>
+<p>That one allowed visibility pair is now complete. Its shared S12 gate
+passed, the treatment engaged the omitted-guide mechanism, and the
+verified stock-26 control strictly dominated the verified full-124
+treatment. The frozen <code>directional-loss</code> decision closes this
+pilot. Do not rerun, replicate, combine, promote, or transfer it; any
+future paid CPU work must test a different mechanism under a new
+protocol and must still clear its own predeclared promotion gate.</p>
+<p>The proxy-cascade wiring qualification and distinct counterbalanced
+model-free resource screen remain complete and exact-once. The resource
+screen passed every frozen equivalence, allocation, evaluator-step CPU,
+wall-saving, and non-slowdown gate: median cascade/control wall ratio
+was <code>0.6443014367</code>, median saving <code>29.6263775 s</code>,
+and median evaluator-step CPU ratio <code>0.6785407264</code>. Its one
+paid authorization was consumed by v1/v2. Both attempts are terminal
+apparatus-invalid, the second-failure stop closes the campaign, and
+neither may be rerun, replaced, appended to, pooled, or retrospectively
+admitted. V2’s online observations remain diagnostics only.</p>
+<p>The role-correct accounting repair and live jobs <code>1703787</code>
+and <code>1703788</code> qualify future apparatus only. They do not
+reopen the campaign or authorize paid dispatch. Any later paid campaign
+requires separate user authorization and a genuinely new hypothesis,
+protocol, name, scientific identity, draw, namespace, source/runtime
+closure, locks, sessions, and fresh measurements. It cannot use v1/v2
+candidates, metrics, or trajectory history as model-visible search
+input. The model-free result itself authorizes no default change,
+KernelBench transfer, GPU claim, or NanoGPT work.</p>
+<h2 id="reproduction-entry-points">Reproduction entry points</h2>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Static validation</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run check</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Recheck the production NanoGPT scored protocol, amendment, data, stock driver,</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># adapter, and durable transport without contacting FarmShare</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> <span class="at">--prefix</span> research/autoresearch run test:nanogpt-scored</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Recheck the production NanoGPT scored worker locally</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> <span class="at">--prefix</span> research/autoresearch run test:nanogpt-scored-worker</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Recheck the pinned public NanoGPT contract</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> <span class="at">--prefix</span> research/autoresearch run test:nanogpt-contract</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Resume only the already-submitted stock score-1 stage; do not submit a replacement</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run autoresearch:nanogpt-scored-stock <span class="at">--</span> <span class="dt">\</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">--output-dir</span> /Users/duy/Documents/build/prime-agent/.autoresearch/nanogpt-scored/stock-v1 <span class="dt">\</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">--mode</span> score-1 <span class="dt">\</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">--reconcile</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Model-free paid-screen protocol, schema, parity, and audit regressions</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> <span class="at">--prefix</span> research/autoresearch run test:ir-delta-screen</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Late-novelty paid-screen sealing, locks, and fail-closed audit regressions</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> <span class="at">--prefix</span> research/autoresearch run test:late-novelty-screen</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Sanitized model-visible adapter errors and host-only raw evidence persistence</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a><span class="ex">npx</span> tsx <span class="at">--test</span> research/autoresearch/test/sidecar.test.ts</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Recheck late-novelty reconstruction and four-call faux isolation</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="ex">npx</span> tsx <span class="at">--test</span> <span class="dt">\</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>  research/autoresearch/test/compiler-gym-late-novelty-headroom.test.ts <span class="dt">\</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>  research/autoresearch/test/compiler-gym-ir-delta-screen-faux-e2e.test.ts</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a><span class="co"># Recheck cross-lane progress and the aggregate four-job GPU cap</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a><span class="ex">npx</span> tsx <span class="at">--test</span> research/autoresearch/test/multi-lane-controller.test.ts</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a><span class="co"># Recheck the zero-model complete-action-space protocol/runner and Python evaluator</span></span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a><span class="ex">npx</span> tsx <span class="at">--test</span> <span class="dt">\</span></span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>  research/autoresearch/test/compiler-gym-complete-action-space-headroom.test.ts <span class="dt">\</span></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>  research/autoresearch/test/compiler-gym-complete-action-space-headroom-runner.test.ts</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> research/autoresearch/test/test_compiler_gym_complete_action_space_headroom_eval.py</span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a><span class="co"># Recheck the completed visibility pair&#39;s protocol, guard, runner, and adapter locally</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a><span class="ex">npx</span> tsx <span class="at">--test</span> <span class="dt">\</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>  research/autoresearch/test/compiler-gym-action-space-visibility-first-proposal-runner.test.ts <span class="dt">\</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>  research/autoresearch/test/compiler-gym-action-space-visibility-preregistration.test.ts <span class="dt">\</span></span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>  research/autoresearch/test/compiler-gym-action-space-visibility-protocol.test.ts <span class="dt">\</span></span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>  research/autoresearch/test/compiler-gym-action-space-visibility-provider-guard.test.ts <span class="dt">\</span></span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>  research/autoresearch/test/compiler-gym-ir-delta-screen-adapter.test.ts</span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a><span class="co"># Recheck the proxy-cascade apparatus and the immutable 13-trajectory replay</span></span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> <span class="at">--prefix</span> research/autoresearch run test:proxy-cascade</span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> <span class="at">--prefix</span> research/autoresearch run proxy-cascade:replay <span class="at">--</span> <span class="at">--check</span></span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a><span class="co"># Recheck paid proxy-cascade provider, runner, accounting, and failure-provenance paths locally</span></span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> <span class="at">--prefix</span> research/autoresearch run test:proxy-cascade-paid</span>
+<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a><span class="co"># Recheck the counterbalanced full-versus-cascade resource-screen protocol and runner</span></span>
+<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> <span class="at">--prefix</span> research/autoresearch run test:proxy-cascade-resource</span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify that both reports, all local citations, and the campaign hash bundle agree</span></span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a><span class="ex">npx</span> tsx research/autoresearch/src/campaign-report-bundle.ts <span class="at">--check</span></span>
+<span id="cb5-63"><a href="#cb5-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-64"><a href="#cb5-64" aria-hidden="true" tabindex="-1"></a><span class="co"># Regenerate HTML and the complete hash bundle after an intentional Markdown update</span></span>
+<span id="cb5-65"><a href="#cb5-65" aria-hidden="true" tabindex="-1"></a><span class="ex">npx</span> tsx research/autoresearch/src/campaign-report-bundle.ts <span class="at">--write</span></span>
+<span id="cb5-66"><a href="#cb5-66" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-67"><a href="#cb5-67" aria-hidden="true" tabindex="-1"></a><span class="co"># Verify the sealed C1 v2 runtime without dispatching it</span></span>
+<span id="cb5-68"><a href="#cb5-68" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run autoresearch:job-step-verify-seal</span>
+<span id="cb5-69"><a href="#cb5-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-70"><a href="#cb5-70" aria-hidden="true" tabindex="-1"></a><span class="co"># Rebuild the sealed v7 analysis and figures from ledgers/artifacts</span></span>
+<span id="cb5-71"><a href="#cb5-71" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run autoresearch:analyze-cpu-smoke <span class="at">--</span> <span class="dt">\</span></span>
+<span id="cb5-72"><a href="#cb5-72" aria-hidden="true" tabindex="-1"></a>  <span class="at">--config</span> research/autoresearch/cpu-smoke-v7.analysis.json <span class="dt">\</span></span>
+<span id="cb5-73"><a href="#cb5-73" aria-hidden="true" tabindex="-1"></a>  <span class="at">--output-dir</span> .autoresearch/cpu-analysis/v7</span>
+<span id="cb5-74"><a href="#cb5-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-75"><a href="#cb5-75" aria-hidden="true" tabindex="-1"></a><span class="co"># Rebuild the full-vs-concise decision from sealed sessions and ledgers</span></span>
+<span id="cb5-76"><a href="#cb5-76" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run autoresearch:analyze-feedback-projection <span class="at">--</span> <span class="dt">\</span></span>
+<span id="cb5-77"><a href="#cb5-77" aria-hidden="true" tabindex="-1"></a>  <span class="at">--screen-dir</span> .autoresearch/feedback-projection-screen</span>
+<span id="cb5-78"><a href="#cb5-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-79"><a href="#cb5-79" aria-hidden="true" tabindex="-1"></a><span class="co"># Rebuild the frozen 69-candidate latency audit and its hashes</span></span>
+<span id="cb5-80"><a href="#cb5-80" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run autoresearch:analyze-compiler-gym-latency</span>
+<span id="cb5-81"><a href="#cb5-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-82"><a href="#cb5-82" aria-hidden="true" tabindex="-1"></a><span class="co"># Replay host-owned champion selection over the historical matched screen</span></span>
+<span id="cb5-83"><a href="#cb5-83" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run autoresearch:host-terminalization-replay</span>
+<span id="cb5-84"><a href="#cb5-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-85"><a href="#cb5-85" aria-hidden="true" tabindex="-1"></a><span class="co"># R 2x2 evaluator-only qualification; this spends FarmShare CPU evaluations</span></span>
+<span id="cb5-86"><a href="#cb5-86" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run autoresearch:r-resurrection-qualify <span class="at">--</span> <span class="dt">\</span></span>
+<span id="cb5-87"><a href="#cb5-87" aria-hidden="true" tabindex="-1"></a>  <span class="at">--output-dir</span> .autoresearch/r-resurrection-qualification/new-run</span>
+<span id="cb5-88"><a href="#cb5-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-89"><a href="#cb5-89" aria-hidden="true" tabindex="-1"></a><span class="co"># Stock Prime CPU baseline; this spends subscription inference and FarmShare CPU</span></span>
+<span id="cb5-90"><a href="#cb5-90" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run autoresearch:stock-cpu-baseline <span class="at">--</span> <span class="dt">\</span></span>
+<span id="cb5-91"><a href="#cb5-91" aria-hidden="true" tabindex="-1"></a>  <span class="at">--output-dir</span> .autoresearch/stock-cpu-baseline/new-run</span></code></pre></div>
+<p>Do not rerun paid or remote commands merely to regenerate the report.
+The immutable ledgers and analysis manifests are the evidence
+inputs.</p>
+</body>
+</html>

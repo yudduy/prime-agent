@@ -430,11 +430,21 @@ export function registerFauxProvider(options: RegisterFauxProviderOptions = {}):
 
 	const stream: StreamFunction<string, StreamOptions> = (requestModel, context, streamOptions) => {
 		const outer = createAssistantMessageEventStream();
-		const step = pendingResponses.shift();
-		state.callCount++;
 
 		queueMicrotask(async () => {
 			try {
+				const payload = { max_output_tokens: streamOptions?.maxTokens ?? requestModel.maxTokens };
+				await streamOptions?.onPayload?.(payload, requestModel);
+				if (streamOptions?.signal?.aborted) {
+					const aborted = createAbortedMessage(
+						createErrorMessage(new Error("Request was aborted"), api, provider, requestModel.id),
+					);
+					outer.push({ type: "error", reason: "aborted", error: aborted });
+					outer.end(aborted);
+					return;
+				}
+				const step = pendingResponses.shift();
+				state.callCount++;
 				await streamOptions?.onResponse?.({ status: 200, headers: {} }, requestModel);
 				if (!step) {
 					let message = createErrorMessage(

@@ -34,6 +34,8 @@
 			"packages/*/src/**/*.ts",
 			"packages/*/test/**/*.ts",
 			"packages/coding-agent/examples/**/*.ts",
+			"research/autoresearch/src/**/*.ts",
+			"research/autoresearch/test/**/*.ts",
 			"!**/node_modules/**/*",
 			"!**/test-sessions.ts",
 			"!**/models.generated.ts",

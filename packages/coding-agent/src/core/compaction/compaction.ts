@@ -6,7 +6,7 @@
  */
 
 import type { AgentMessage, ThinkingLevel } from "@earendil-works/pi-agent-core";
-import type { AssistantMessage, Model, Usage } from "@earendil-works/pi-ai";
+import type { AssistantMessage, Model, SimpleStreamOptions, Usage } from "@earendil-works/pi-ai";
 import { completeSimple } from "@earendil-works/pi-ai";
 import {
 	convertToLlm,
@@ -98,6 +98,23 @@ export interface CompactionResult<T = unknown> {
 	tokensBefore: number;
 	/** Extension-specific data (e.g., ArtifactIndex, version markers for structured compaction) */
 	details?: T;
+}
+
+export type CompactionProviderOptions = Pick<
+	SimpleStreamOptions,
+	| "transport"
+	| "serviceTier"
+	| "timeoutMs"
+	| "maxRetries"
+	| "maxRetryDelayMs"
+	| "sessionId"
+	| "onPayload"
+	| "onResponse"
+>;
+
+export interface CompactionExecutionOptions {
+	providerOptions?: CompactionProviderOptions;
+	onProviderComplete?: (message: AssistantMessage) => void | Promise<void>;
 }
 export const COMPACT_SKILL_NAME = "compact";
 
@@ -348,6 +365,11 @@ export interface CutPointResult {
 	isSplitTurn: boolean;
 }
 
+function isUserBoundary(entry: SessionEntry): boolean {
+	if (entry.type === "branch_summary" || entry.type === "custom_message") return true;
+	return entry.type === "message" && (entry.message.role === "user" || entry.message.role === "bashExecution");
+}
+
 /**
  * Find the cut point in session entries that keeps approximately `keepRecentTokens`.
  *
@@ -380,8 +402,9 @@ export function findCutPoint(
 
 	for (let i = endIndex - 1; i >= startIndex; i--) {
 		const entry = entries[i];
-		if (entry.type !== "message") continue;
-		const messageTokens = estimateTokens(entry.message);
+		const message = getMessageFromEntry(entry);
+		if (!message) continue;
+		const messageTokens = estimateTokens(message);
 		accumulatedTokens += messageTokens;
 		if (accumulatedTokens >= keepRecentTokens) {
 			for (let c = 0; c < cutPoints.length; c++) {
@@ -404,14 +427,14 @@ export function findCutPoint(
 		cutIndex--;
 	}
 	const cutEntry = entries[cutIndex];
-	const isUserMessage = cutEntry.type === "message" && cutEntry.message.role === "user";
+	const userBoundary = isUserBoundary(cutEntry);
 	// A cut in a non-user turn requires a prefix summary.
-	const turnStartIndex = isUserMessage ? -1 : findTurnStartIndex(entries, cutIndex, startIndex);
+	const turnStartIndex = userBoundary ? -1 : findTurnStartIndex(entries, cutIndex, startIndex);
 
 	return {
 		firstKeptEntryIndex: cutIndex,
 		turnStartIndex,
-		isSplitTurn: !isUserMessage && turnStartIndex !== -1,
+		isSplitTurn: !userBoundary && turnStartIndex !== -1,
 	};
 }
 const SUMMARIZATION_PROMPT = `The messages above are a conversation to summarize. Create a structured context checkpoint summary that another LLM will use to continue the work.
@@ -515,6 +538,7 @@ export async function generateSummary(
 	customInstructions?: string,
 	previousSummary?: string,
 	thinkingLevel?: ThinkingLevel,
+	executionOptions?: CompactionExecutionOptions,
 ): Promise<string> {
 	const maxTokens = Math.floor(0.8 * reserveTokens);
 
@@ -536,16 +560,24 @@ export async function generateSummary(
 		},
 	];
 
-	const completionOptions =
+	const completionOptions: SimpleStreamOptions =
 		model.reasoning && thinkingLevel && thinkingLevel !== "off"
-			? { maxTokens, signal, apiKey, headers, reasoning: thinkingLevel }
-			: { maxTokens, signal, apiKey, headers };
+			? {
+					...executionOptions?.providerOptions,
+					maxTokens,
+					signal,
+					apiKey,
+					headers,
+					reasoning: thinkingLevel,
+				}
+			: { ...executionOptions?.providerOptions, maxTokens, signal, apiKey, headers };
 
 	const response = await completeSimple(
 		model,
 		{ systemPrompt: SUMMARIZATION_SYSTEM_PROMPT, messages: summarizationMessages },
 		completionOptions,
 	);
+	await executionOptions?.onProviderComplete?.(response);
 
 	if (response.stopReason === "error") {
 		throw new Error(`Summarization failed: ${response.errorMessage || "Unknown error"}`);
@@ -678,6 +710,7 @@ export async function compact(
 	customInstructions?: string,
 	signal?: AbortSignal,
 	thinkingLevel?: ThinkingLevel,
+	executionOptions?: CompactionExecutionOptions,
 ): Promise<CompactionResult> {
 	const {
 		firstKeptEntryId,
@@ -704,6 +737,7 @@ export async function compact(
 						customInstructions,
 						previousSummary,
 						thinkingLevel,
+						executionOptions,
 					)
 				: Promise.resolve("No prior history."),
 			generateTurnPrefixSummary(
@@ -714,6 +748,7 @@ export async function compact(
 				headers,
 				signal,
 				thinkingLevel,
+				executionOptions,
 			),
 		]);
 		summary = `${historyResult}\n\n---\n\n**Turn Context (split turn):**\n\n${turnPrefixResult}`;
@@ -728,6 +763,7 @@ export async function compact(
 			customInstructions,
 			previousSummary,
 			thinkingLevel,
+			executionOptions,
 		);
 	}
 	const { readFiles, modifiedFiles } = computeFileLists(fileOps);
@@ -756,6 +792,7 @@ async function generateTurnPrefixSummary(
 	headers?: Record<string, string>,
 	signal?: AbortSignal,
 	thinkingLevel?: ThinkingLevel,
+	executionOptions?: CompactionExecutionOptions,
 ): Promise<string> {
 	const maxTokens = Math.floor(0.5 * reserveTokens); // Smaller budget for turn prefix
 	const llmMessages = convertToLlm(messages);
@@ -773,9 +810,17 @@ async function generateTurnPrefixSummary(
 		model,
 		{ systemPrompt: SUMMARIZATION_SYSTEM_PROMPT, messages: summarizationMessages },
 		model.reasoning && thinkingLevel && thinkingLevel !== "off"
-			? { maxTokens, signal, apiKey, headers, reasoning: thinkingLevel }
-			: { maxTokens, signal, apiKey, headers },
+			? {
+					...executionOptions?.providerOptions,
+					maxTokens,
+					signal,
+					apiKey,
+					headers,
+					reasoning: thinkingLevel,
+				}
+			: { ...executionOptions?.providerOptions, maxTokens, signal, apiKey, headers },
 	);
+	await executionOptions?.onProviderComplete?.(response);
 
 	if (response.stopReason === "error") {
 		throw new Error(`Turn prefix summarization failed: ${response.errorMessage || "Unknown error"}`);

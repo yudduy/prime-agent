@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "analysisId": "compiler-gym-allocation-latency-v1",
+  "ledgerRoot": ".autoresearch",
+  "outputDirectory": ".autoresearch/compiler-gym-latency-audit",
+  "ledgerPaths": [
+    "cpu-canaries/control-v7-live-endpoint-2026-08-28-v1/evidence.jsonl",
+    "cpu-pilots/M-2026-08-28-v2-pair2/evidence.jsonl",
+    "cpu-pilots/M-sealed-2026-08-28-v7-pair1/evidence.jsonl",
+    "cpu-pilots/R-2026-08-28-v2-smoke/evidence.jsonl",
+    "cpu-pilots/W-2026-08-28-v2-width-a/evidence.jsonl",
+    "cpu-pilots/W-2026-08-28-v2-width-b/evidence.jsonl",
+    "cpu-pilots/control-2026-08-28-v2-pair2/evidence.jsonl",
+    "cpu-pilots/control-M-sealed-2026-08-28-v7-pair1/evidence.jsonl",
+    "feedback-projection-screen/concise/evaluation/evidence.jsonl",
+    "feedback-projection-screen/full/evaluation/evidence.jsonl",
+    "r-resurrection-qualification/2026-08-28-v1/evidence.jsonl",
+    "stock-cpu-baseline/2026-08-28-v3-v2-sealed/evaluation/evidence.jsonl",
+    "stock-interface-pair-screen/2026-08-28-block-v1/stock/evaluation/evidence.jsonl",
+    "stock-interface-pair-screen/2026-08-28-block-v1/typed/evaluation/evidence.jsonl",
+    "stock-interface-pair-screen/2026-08-28-block-v2/stock/evaluation/evidence.jsonl",
+    "stock-interface-pair-screen/2026-08-28-block-v3/stock/evaluation/evidence.jsonl",
+    "stock-interface-pair-screen/2026-08-28-block-v3/typed/evaluation/evidence.jsonl",
+    "stock-interface-pair-screen/2026-08-28-block-v4/stock/evaluation/evidence.jsonl",
+    "stock-interface-pair-screen/2026-08-28-block-v4/typed/evaluation/evidence.jsonl",
+    "stock-interface-parity/2026-08-28-v1/evaluation/evidence.jsonl",
+    "stock-interface-parity/2026-08-28-v2/evaluation/evidence.jsonl"
+  ],
+  "sensitivityLedgerPaths": [
+    "feedback-projection-screen/full/evaluation/evidence.jsonl",
+    "feedback-projection-screen/concise/evaluation/evidence.jsonl"
+  ],
+  "inclusion": {
+    "verifierEpoch": "compiler-gym-v0.2.5-farmshare-cbench-ldpath-base20-raw-v2",
+    "benchmarkIds": [
+      "benchmark://cbench-v1/blowfish",
+      "benchmark://cbench-v1/bzip2"
+    ],
+    "requireNoReuse": true,
+    "requireAcceptedStatus": true,
+    "requireVerifierPassed": true,
+    "requireFiniteTimings": true,
+    "requireRecordedResidualMatchesFormula": true
+  },
+  "deduplication": {
+    "key": "jobId",
+    "identicalDuplicate": "deduplicate",
+    "conflictingDuplicate": "error"
+  },
+  "hardware": {
+    "cluster": "Stanford FarmShare",
+    "partition": "normal",
+    "cpuConstraint": "CPU_SKU:9384X"
+  },
+  "provenance": {
+    "adapter": "farmshare-compiler-gym",
+    "evaluatorSha256": "1e78543b47d2142fd18f6bc8b66ebde8134700f73032290e78b279d02ef67266",
+    "environmentSpecSha256": "a1daa0f10fcfe93fa7cb7e063715b51bd381c46fc156725d229bbfef7c386c10",
+    "cbenchPatchSha256": "259956ea61364336dbc3e326cd27c7b6a0342fadbeba32b6c29da7024a4ccc00",
+    "upstreamCbenchSourceSha256": "e6337c70f9a3e83abc8f54d9b4193e7ba51fe853a555fa78e472b2fc87920d88",
+    "installedCbenchSourceSha256": "6e38fd10d4bfd7816dbe6f959ff8ae97a3c10ab94cadde883926d83c0db521ed",
+    "distributionManifestSha256": "4b84dea7461512ef8fdadb99a992066484119fc91b7d8f0d3b33b5598fa870dd",
+    "compatibilityTreeManifestSha256": "c43abf7ca127d96a72b3f83f3185246ce4194d49481ed7264e7806a0788f71c1",
+    "libtinfoSha256": "d82654b2615eb347e8f15a63862c9234f452187250b75d36dce8bd964541f02e",
+    "compilerGym": "0.2.5",
+    "llvm": "10.0.0"
+  },
+  "formulas": {
+    "wallMs": "task.metrics.schedulerAndEvaluatorWallMs",
+    "evaluatorMs": "task.metrics.evaluatorRuntimeMs",
+    "recordedResidualMs": "task.metrics.queueAndTransportMs",
+    "residualMs": "max(0, wallMs - evaluatorMs)",
+    "criticalMs": "max(blowfish.wallMs, bzip2.wallMs)",
+    "residualDeltaMs": "bzip2.residualMs - blowfish.residualMs",
+    "optimisticFusionSavingMs": "max(0, residualDeltaMs)",
+    "median": "middle value for odd cardinality; arithmetic mean of the two middle values for even cardinality",
+    "summaryPrecisionDecimals": 3,
+    "summaryRounding": "half-away-from-zero"
+  },
+  "warmAllocationHeadroom": {
+    "groupBy": "ledgerPath",
+    "multiCandidateMinimumMeasurements": 2,
+    "excludeFirstMeasurementPerLedger": true,
+    "postFirstSavingMs": "bzip2.residualMs",
+    "trajectoryOptimisticTotalSavingMs": "sum(post-first bzip2.residualMs)",
+    "trajectoryObservedCriticalTotalMs": "sum(all candidate criticalMs, including first)",
+    "trajectoryOptimisticFraction": "trajectoryOptimisticTotalSavingMs / trajectoryObservedCriticalTotalMs",
+    "postFirstMedianPrecisionDecimals": 4,
+    "trajectoryTotalPrecisionDecimals": 3,
+    "trajectoryFractionPrecisionDecimals": 6,
+    "interpretation": "optimistic upper-bound proxy; not a causal estimate"
+  },
+  "expectations": {
+    "cohort": {
+      "rowCount": 69,
+      "bzip2CriticalCount": 69,
+      "medianCriticalMs": 21690,
+      "medianBzip2EvaluatorMs": 14765.021,
+      "medianBzip2ResidualMs": 6501.816,
+      "medianResidualDeltaMs": 0.731,
+      "medianOptimisticFusionSavingMs": 0.731
+    },
+    "sensitivity": {
+      "rowCount": 8,
+      "bzip2CriticalCount": 8,
+      "medianCriticalMs": 20229,
+      "medianBzip2EvaluatorMs": 14834.133,
+      "medianBzip2ResidualMs": 5373.593,
+      "medianOptimisticFusionSavingMs": 2138.231
+    },
+    "warmAllocationHeadroom": {
+      "multiCandidateLedgerCount": 18,
+      "postFirstCandidateCount": 48,
+      "medianPostFirstBzip2ResidualMs": 8707.9255,
+      "medianTrajectoryOptimisticTotalSavingMs": 20297.718,
+      "medianTrajectoryOptimisticFraction": 0.248568
+    }
+  }
+}
