@@ -1,0 +1,278 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { type Context, fauxAssistantMessage, fauxToolCall } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
+import { afterEach, describe, expect, it } from "vitest";
+import { defineTool } from "../../src/core/extensions/index.js";
+import {
+	runWithStrategy,
+	type StrategyDecision,
+	type StrategyRunEvent,
+	type StrategyRunOptions,
+	type WorkReport,
+} from "../../src/core/strategy/index.js";
+import { createHarness, getMessageText, type Harness } from "./harness.js";
+
+function decision(
+	action: "start" | "continue" | "switch",
+	approach = "Tune the current method",
+	ids: string[] = [],
+): StrategyDecision {
+	return {
+		action,
+		approach,
+		reason: "This next step can resolve the remaining uncertainty.",
+		nextStep: "Measure the candidate and return the result.",
+		expectedEvidence: "The measured score.",
+		reviewWhen: "The measurement finishes or the setup fails.",
+		alternative: "Replace the method.",
+		concern: "Tuning may have reached its useful limit.",
+		evidenceIds: ids,
+	};
+}
+
+function report(ids: string[] = []): WorkReport {
+	return {
+		changes: "Adjusted the candidate.",
+		observations: ["The score did not improve."],
+		artifacts: [],
+		unresolved: ["Is a different method needed?"],
+		needsReview: true,
+		evidenceIds: ids,
+	};
+}
+
+function call(name: string, args: Record<string, unknown>) {
+	return fauxAssistantMessage(fauxToolCall(name, args), { stopReason: "toolUse" });
+}
+
+const stop = () =>
+	call("choose_strategy", {
+		action: "stop",
+		reason: "The recorded result is sufficient for this task.",
+		evidenceIds: [],
+	});
+const conversation = (context: Context) => context.messages.map(getMessageText).join("\n");
+
+describe("strategy loop", () => {
+	const harnesses: Harness[] = [];
+	afterEach(() => {
+		for (const harness of harnesses.splice(0)) harness.cleanup();
+	});
+
+	async function setup(overrides: Partial<StrategyRunOptions> = {}) {
+		const harness = await createHarness();
+		harnesses.push(harness);
+		const events: StrategyRunEvent[] = [];
+		const options: StrategyRunOptions = {
+			objective: "Improve the candidate",
+			successCriteria: "A measured improvement or an evidenced stop.",
+			cwd: harness.tempDir,
+			agentDir: join(harness.tempDir, "agent"),
+			outputDir: join(harness.tempDir, "runs"),
+			model: harness.getModel(),
+			authStorage: harness.authStorage,
+			modelRegistry: harness.session.modelRegistry,
+			resourceLoader: harness.session.resourceLoader,
+			tools: [],
+			onEvent: (event) => events.push(event),
+			...overrides,
+		};
+		return { harness, events, options };
+	}
+
+	it("continues the same worker, switches to a fresh one, and saves evidence and history", async () => {
+		const measure = defineTool({
+			name: "measure",
+			label: "Measure",
+			description: "Return the measured score.",
+			parameters: Type.Object({}),
+			async execute() {
+				return { content: [{ type: "text", text: "score=100; no improvement" }], details: {} };
+			},
+		});
+		const { harness, events, options } = await setup({ customTools: [measure] });
+		harness.setResponses([
+			(context) => {
+				expect(context.tools?.map((tool) => tool.name).sort()).toEqual(["choose_strategy", "read_evidence"]);
+				return call("choose_strategy", decision("start"));
+			},
+			fauxAssistantMessage([{ type: "text", text: "private-worker-narrative" }, fauxToolCall("measure", {})], {
+				stopReason: "toolUse",
+			}),
+			call("report_result", report(["evidence-1"])),
+			(context) => {
+				expect(conversation(context)).not.toContain("private-worker-narrative");
+				expect(conversation(context)).toContain("score=100");
+				return call("choose_strategy", decision("continue", undefined, ["evidence-1"]));
+			},
+			(context) => {
+				expect(conversation(context)).toContain("private-worker-narrative");
+				return call("measure", {});
+			},
+			call("report_result", report(["evidence-2"])),
+			(context) => {
+				expect(conversation(context)).not.toContain("private-worker-narrative");
+				return call("choose_strategy", decision("switch", "Replace the method", ["evidence-2"]));
+			},
+			(context) => {
+				expect(conversation(context)).not.toContain("private-worker-narrative");
+				expect(conversation(context)).toContain("Replace the method");
+				expect(conversation(context)).toContain("score=100");
+				return call("report_result", report(["evidence-2"]));
+			},
+			stop(),
+			fauxAssistantMessage("must not run"),
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("strategy_stop");
+		expect(result.steps.map((step) => step.status)).toEqual(["reported", "reported", "reported"]);
+		expect(result.steps[0].sessionId).toBe(result.steps[1].sessionId);
+		expect(result.steps[2].sessionId).not.toBe(result.steps[1].sessionId);
+		expect(result.strategies.map((strategy) => strategy.steps)).toEqual([2, 1]);
+		expect(result.strategies[0].leftReason).toBeTruthy();
+		expect(result.usage.output).toBeGreaterThan(0);
+		expect(harness.getPendingResponseCount()).toBe(1);
+		const reviews = events.filter((event) => event.type === "session_started" && event.role === "strategist");
+		expect(new Set(reviews.map((event) => event.type === "session_started" && event.sessionId)).size).toBe(4);
+		const saved = (await readFile(join(result.outputDir, "history.jsonl"), "utf8"))
+			.trim()
+			.split("\n")
+			.map((line) => JSON.parse(line));
+		expect(saved).toEqual(JSON.parse(JSON.stringify(events)));
+		expect(saved.map((event) => event.sequence)).toEqual(saved.map((_event, index) => index));
+		expect(JSON.parse(await readFile(result.steps[0].evidence[0].path, "utf8"))).toMatchObject({
+			isError: false,
+			result: { content: [{ type: "text", text: "score=100; no improvement" }] },
+		});
+		for (const event of events) {
+			if (event.type === "session_started")
+				expect(await readFile(event.sessionFile!, "utf8")).toContain(event.sessionId);
+		}
+		const closed = events.filter((event) => event.type === "session_closed").map((event) => event.sessionId);
+		expect(closed).toContain(result.steps[0].sessionId);
+	});
+
+	it("blocks tools after accepting a terminal result in the same response", async () => {
+		let executions = 0;
+		const work = defineTool({
+			name: "work",
+			label: "Work",
+			description: "Perform work.",
+			parameters: Type.Object({}),
+			async execute() {
+				executions++;
+				return { content: [], details: {} };
+			},
+		});
+		const { harness, options } = await setup({ customTools: [work] });
+		harness.setResponses([
+			call("choose_strategy", decision("start")),
+			fauxAssistantMessage([fauxToolCall("report_result", report()), fauxToolCall("work", {})], {
+				stopReason: "toolUse",
+			}),
+			stop(),
+			fauxAssistantMessage("must not run"),
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("strategy_stop");
+		expect(executions).toBe(0);
+		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
+	it("requires a valid strategy decision before dispatch", async () => {
+		const { harness, events, options } = await setup();
+		harness.setResponses([
+			call("choose_strategy", decision("continue")),
+			call("choose_strategy", decision("continue")),
+			call("choose_strategy", decision("continue")),
+			fauxAssistantMessage("must not run"),
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("error");
+		expect(events.some((event) => event.type === "step_started")).toBe(false);
+		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
+	it("allows one correction for a missing decision", async () => {
+		const { harness, options } = await setup();
+		harness.setResponses([fauxAssistantMessage("I suggest stopping."), stop()]);
+		expect((await runWithStrategy(options)).stopReason).toBe("strategy_stop");
+		expect(harness.getPendingResponseCount()).toBe(0);
+	});
+
+	it("returns incomplete work to review without claiming the approach failed", async () => {
+		const { harness, options } = await setup();
+		harness.setResponses([
+			call("choose_strategy", decision("start")),
+			fauxAssistantMessage("Partial work."),
+			fauxAssistantMessage("Still no report."),
+			(context) => {
+				expect(conversation(context)).toContain('"status":"incomplete"');
+				return stop();
+			},
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.steps[0]).toMatchObject({ status: "incomplete", report: undefined });
+		expect(result.stopReason).toBe("strategy_stop");
+	});
+
+	it("enforces turn and step limits without another worker call", async () => {
+		const tool = defineTool({
+			name: "work",
+			label: "Work",
+			description: "Work",
+			parameters: Type.Object({}),
+			async execute() {
+				return { content: [], details: {} };
+			},
+		});
+		const { harness, options } = await setup({ customTools: [tool], limits: { maxWorkerTurns: 1, maxSteps: 1 } });
+		harness.setResponses([
+			call("choose_strategy", decision("start")),
+			call("work", {}),
+			(context) => {
+				expect(conversation(context)).toContain('"status":"turn_limit"');
+				return call("choose_strategy", decision("continue"));
+			},
+			fauxAssistantMessage("must not run"),
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("limit_reached");
+		expect(result.steps).toHaveLength(1);
+		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
+	it("cancels an active tool and settles it before closing the session", async () => {
+		const controller = new AbortController();
+		let settled = false;
+		const wait = defineTool({
+			name: "wait",
+			label: "Wait",
+			description: "Wait",
+			parameters: Type.Object({}),
+			async execute(_id, _params, signal) {
+				await new Promise<void>((resolve) => {
+					signal?.addEventListener(
+						"abort",
+						() => {
+							settled = true;
+							resolve();
+						},
+						{ once: true },
+					);
+					controller.abort();
+				});
+				return { content: [], details: {} };
+			},
+		});
+		const { harness, events, options } = await setup({ customTools: [wait], signal: controller.signal });
+		harness.setResponses([call("choose_strategy", decision("start")), call("wait", {}), stop()]);
+		const result = await runWithStrategy(options);
+		expect(settled).toBe(true);
+		expect(result.stopReason).toBe("cancelled");
+		expect(result.steps[0].status).toBe("cancelled");
+		expect(events.at(-2)?.type).toBe("session_closed");
+		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+});

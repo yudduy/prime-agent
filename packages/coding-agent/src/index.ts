@@ -242,6 +242,21 @@ export {
 	type SkillPythonMetadata,
 } from "./core/skills.js";
 export { createSyntheticSourceInfo } from "./core/source-info.js";
+export {
+	DEFAULT_STRATEGY_LIMITS,
+	type Evidence,
+	runWithStrategy,
+	type Strategy,
+	type StrategyDecision,
+	type StrategyLimits,
+	type StrategyRunEvent,
+	type StrategyRunOptions,
+	type StrategyRunResult,
+	type StrategyStopReason,
+	type StrategyUsage,
+	type WorkReport,
+	type WorkResult,
+} from "./core/strategy/index.js";
 // Tools
 export {
 	type BashOperations,
