@@ -59,13 +59,15 @@ async function main(): Promise<void> {
 		options: {
 			"tasks-dir": { type: "string" },
 			"output-dir": { type: "string" },
+			model: { type: "string" },
+			"preflight-dir": { type: "string" },
 			"preflight-only": { type: "boolean" },
 			help: { type: "boolean" },
 		},
 	});
 	if (values.help) {
 		console.log(
-			"Usage: npx tsx --tsconfig ../../tsconfig.json examples/sdk/15-strategy-pilot.ts --tasks-dir /path/to/terminal-bench-2-1/tasks --output-dir /path/to/results [--preflight-only]",
+			"Usage: npx tsx --tsconfig ../../tsconfig.json examples/sdk/15-strategy-pilot.ts --tasks-dir /path/to/terminal-bench-2-1/tasks --output-dir /path/to/results [--model codex-model-id] [--preflight-only | --preflight-dir /path/to/validated-pilot]",
 		);
 		return;
 	}
@@ -87,16 +89,32 @@ async function main(): Promise<void> {
 	const configured = SettingsManager.create(process.cwd(), getAgentDir());
 	const authStorage = AuthStorage.create();
 	const modelRegistry = ModelRegistry.create(authStorage);
-	const model = modelRegistry.find(configured.getDefaultProvider() ?? "", configured.getDefaultModel() ?? "");
+	const model = modelRegistry.find(
+		values.model ? "openai-codex" : (configured.getDefaultProvider() ?? ""),
+		values.model ?? configured.getDefaultModel() ?? "",
+	);
 	if (!values["preflight-only"] && (!model || model.provider !== "openai-codex")) {
 		throw new Error("This pilot requires a configured Codex model; its SSE retry accounting is covered by tests.");
 	}
 	try {
+		if (
+			!values["preflight-only"] &&
+			!(await modelRegistry.getExecutableModels()).some(
+				(candidate) => candidate.provider === model?.provider && candidate.id === model?.id,
+			)
+		) {
+			throw new Error(
+				"The configured model is unavailable for this account. Select an executable Codex model with --model.",
+			);
+		}
+		const preparedTasks = await Promise.all(
+			tasks.map(async (task) => ({ ...task, files: await fileHashes(join(tasksDir, task.name)) })),
+		);
+		const preflightDir = values["preflight-dir"] ? resolve(values["preflight-dir"]) : undefined;
 		await save("config.json", {
 			revision,
-			tasks: await Promise.all(
-				tasks.map(async (task) => ({ ...task, files: await fileHashes(join(tasksDir, task.name)) })),
-			),
+			tasks: preparedTasks,
+			preflightDir,
 			model: model ? { provider: model.provider, id: model.id } : undefined,
 			thinkingLevel: "low",
 			serviceTier: "default",
@@ -115,7 +133,21 @@ async function main(): Promise<void> {
 			oracleSetup:
 				"The log oracle's redundant apt installation is replaced by checking that grep and date exist. Solution logic and final tests are unchanged.",
 		});
-		for (const task of tasks) {
+		if (preflightDir) {
+			const previous = JSON.parse(await readFile(join(preflightDir, "config.json"), "utf8"));
+			if (previous.revision !== revision || JSON.stringify(previous.tasks) !== JSON.stringify(preparedTasks))
+				throw new Error("Preflight source or image hashes differ from this run.");
+			for (const task of tasks) {
+				for (const kind of ["blank", "oracle"] as const) {
+					const result = JSON.parse(
+						await readFile(join(preflightDir, `${task.name}-${kind}`, "result.json"), "utf8"),
+					);
+					if (result.passed !== (kind === "oracle")) throw new Error("Referenced preflight has not passed.");
+				}
+			}
+			console.log(`Reusing qualified preflight: ${preflightDir}`);
+		}
+		for (const task of preflightDir ? [] : tasks) {
 			for (const kind of ["blank", "oracle"] as const) {
 				cancellation.signal.throwIfAborted();
 				console.log(`Preflight ${task.name}: ${kind}`);
@@ -254,10 +286,13 @@ async function main(): Promise<void> {
 					await writeFile(join(trialDir, "agent-result.json"), JSON.stringify(result, null, 2));
 					if (cancellation.signal.aborted) cancellation.signal.throwIfAborted();
 					const verified = await container.verify();
+					const scored = result.stopReason !== "error" && modelBudget.usage.unreportedRequests === 0;
 					const summary = {
 						task: task.name,
 						mode,
-						passed: verified.passed,
+						status: scored ? "scored" : "runtime_error",
+						passed: scored ? verified.passed : null,
+						verificationPassed: verified.passed,
 						agentTimeMs,
 						toolCalls,
 						usage: result.usage,
