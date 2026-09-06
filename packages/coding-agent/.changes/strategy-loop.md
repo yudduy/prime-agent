@@ -6,3 +6,4 @@
 - Fixed strategy continuation to preserve the worker when an approach is reworded, and avoided retries for unused decision fields.
 - Added a bounded CPU research example comparing strategy and continuous agents on Heilbronn constructions with exact host verification.
 - Clarified which fields a strategist must provide when assigning work or stopping.
+- Marked shortened evidence previews and added visible paging instructions when reading saved records.

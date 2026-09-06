@@ -134,6 +134,8 @@ describe("strategy tasks", () => {
 		expect(result.steps[0].sessionId).not.toBe(result.steps[1].sessionId);
 		expect(result.steps[0].report?.observations).toEqual(["The claim is proved."]);
 		expect(result.steps[0].evidence.map((entry) => entry.source)).toEqual(["tool", "check"]);
+		expect(result.steps[0].evidence[1].preview).toContain("[Preview truncated.");
+		expect(result.steps[1].evidence[0].preview).not.toContain("[Preview truncated.");
 		expect(JSON.parse(await readFile(result.steps[0].evidence[1].path, "utf8"))).toMatchObject({ status: "failed" });
 		expect(harness.getPendingResponseCount()).toBe(1);
 		const history = (await readFile(join(result.outputDir, "history.jsonl"), "utf8"))

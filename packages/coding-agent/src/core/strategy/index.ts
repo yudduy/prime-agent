@@ -56,6 +56,8 @@ Compare continuing the current approach with a plausible alternative. Explain wh
 what it should teach, and the strongest objection to your choice. Repeated local changes without new evidence
 deserve review, but a plateau alone does not require switching. Distinguish execution failures, missing information,
 and evidence against an approach. Treat worker reports as claims and inspect recorded evidence when needed.
+Previews may omit decisive results. Read the relevant saved records before concluding that an approach was not
+tested or that an assumption survived the work.
 Task checks come from the host: failed means the checked criteria were not met; error means the check did not work;
 inconclusive means the evidence does not settle the question. Your assessment is separate from these checks.
 A step can be worthwhile because it tests an assumption or finds a counterexample, even without improving a score.
@@ -72,6 +74,12 @@ Return when the assignment is complete, its premise fails, or the stated review 
 Use report_result as your final and sole tool call in that response. Report observations and unresolved questions
 honestly, including contradictory evidence. Artifacts and observations in your report are claims, not host verification.
 Do not launch other agents or leave background work running. The controller decides the next assignment.`;
+
+function previewEvidence(content: string): string {
+	return content.length <= 1200
+		? content
+		: `${content.slice(0, 1200)}\n[Preview truncated. Use read_evidence for the full saved record.]`;
+}
 
 function readLimits(overrides: Partial<StrategyLimits> = {}): StrategyLimits {
 	const limits = { ...DEFAULT_STRATEGY_LIMITS, ...overrides };
@@ -153,8 +161,20 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 			if (!record) throw new Error(`Unknown evidence: ${params.id}`);
 			const content = await readFile(record.path, "utf8");
 			const offset = params.offset ?? 0;
+			const end = Math.min(content.length, offset + (params.length ?? 12_000));
+			const page = content.slice(offset, end);
+			const next =
+				end < content.length
+					? `More remains. Use read_evidence with ${JSON.stringify({ id: record.id, offset: end })}.`
+					: "End of saved record.";
 			return {
-				content: [{ type: "text", text: content.slice(offset, offset + (params.length ?? 12_000)) }],
+				content: [
+					{ type: "text", text: page },
+					{
+						type: "text",
+						text: `Read ${page.length} characters at offset ${offset} of ${content.length}. ${next}`,
+					},
+				],
 				details: { id: record.id, offset, totalCharacters: content.length },
 			};
 		},
@@ -411,11 +431,12 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 							toolCallId: context.toolCall.id,
 							isError: previous?.isError ?? context.isError,
 							path,
-							preview: output.content
-								.filter((part) => part.type === "text")
-								.map((part) => part.text)
-								.join("\n")
-								.slice(0, 1200),
+							preview: previewEvidence(
+								output.content
+									.filter((part) => part.type === "text")
+									.map((part) => part.text)
+									.join("\n"),
+							),
 						};
 						evidence.set(id, record);
 						await saveEvent({ type: "evidence", evidence: record });
@@ -492,7 +513,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 					step,
 					sessionId: session.sessionId,
 					isError: checked.status === "error",
-					preview: JSON.stringify(checked).slice(0, 1200),
+					preview: previewEvidence(JSON.stringify(checked)),
 				};
 				evidence.set(id, record);
 				work.evidence.push(record);

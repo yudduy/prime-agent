@@ -117,6 +117,7 @@ describe("strategy loop", () => {
 			(context) => {
 				expect(conversation(context)).not.toContain("private-worker-narrative");
 				expect(conversation(context)).toContain("score=100");
+				expect(conversation(context)).not.toContain("[Preview truncated.");
 				return call("choose_strategy", decision("continue", undefined, ["evidence-1"]));
 			},
 			(context) => {
@@ -343,6 +344,45 @@ describe("strategy loop", () => {
 			},
 		]);
 		expect((await runWithStrategy(options)).stopReason).toBe("strategy_stop");
+	});
+
+	it("marks incomplete previews and exposes paging instructions when long arguments precede the result", async () => {
+		const content = `Initial trials supported the method.\n${"trial\n".repeat(500)}Contradiction: the full search already ran and plateaued.`;
+		const measure = defineTool({
+			name: "measure",
+			label: "Measure",
+			description: "Run the supplied search.",
+			parameters: Type.Object({ script: Type.String() }),
+			async execute() {
+				return { content: [{ type: "text", text: content }], details: {} };
+			},
+		});
+		const { harness, options } = await setup({ customTools: [measure], limits: { maxWorkerTurns: 1 } });
+		harness.setResponses([
+			call("choose_strategy", decision("start")),
+			call("measure", { script: "setup\n".repeat(3000) }),
+			(context) => {
+				expect(conversation(context)).toContain('"status":"turn_limit"');
+				expect(conversation(context)).toContain("[Preview truncated.");
+				expect(conversation(context)).not.toContain("Contradiction:");
+				return call("read_evidence", { id: "evidence-1" });
+			},
+			(context) => {
+				expect(getMessageText(context.messages.at(-1))).toContain('"offset":12000');
+				expect(conversation(context)).not.toContain("Contradiction:");
+				return call("read_evidence", { id: "evidence-1", offset: 12000, length: 20000 });
+			},
+			(context) => {
+				expect(getMessageText(context.messages.at(-1))).toContain("End of saved record.");
+				expect(conversation(context)).toContain("Contradiction: the full search already ran and plateaued.");
+				return stop();
+			},
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("strategy_stop");
+		expect(result.steps[0].report).toBeUndefined();
+		expect(JSON.parse(await readFile(result.steps[0].evidence[0].path, "utf8")).result.content[0].text).toBe(content);
+		expect(harness.getPendingResponseCount()).toBe(0);
 	});
 
 	it("passes tool execution failures to review as failures of execution", async () => {
