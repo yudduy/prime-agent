@@ -61,6 +61,9 @@ inconclusive means the evidence does not settle the question. Your assessment is
 A step can be worthwhile because it tests an assumption or finds a counterexample, even without improving a score.
 Reconsider the explanation of the problem and the method while preserving the caller's objective and constraints.
 Use start only for the first approach, continue for another step within it, switch for a different approach, or stop.
+An approach is a method that can span several work steps. Advancing from inspection to implementation normally
+continues that method. Continue retains the registered approach; use nextStep to advance the work. Switch changes
+the method and creates a fresh worker. Do not switch just to reword the approach or advance to its next phase.
 Respect the fixed objective and limits. Stop may mean completion or that no useful next step remains; explain which.
 Use choose_strategy as your final and sole tool call in that response. Your decision controls the next assignment.`;
 
@@ -189,6 +192,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 			constraints: task.constraints,
 			cwd,
 			limits,
+			modelBudget: options.modelBudget?.limits,
 		});
 		runAbort.signal.throwIfAborted();
 		const customTools = task.createTools?.(context) ?? [];
@@ -297,6 +301,19 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 				strategies,
 				latestResult: steps.at(-1),
 				remainingSteps: limits.maxSteps - steps.length,
+				remainingModelBudget: options.modelBudget
+					? {
+							requests: Math.max(0, options.modelBudget.limits.maxRequests - options.modelBudget.usage.requests),
+							inputBytes: Math.max(
+								0,
+								options.modelBudget.limits.maxInputBytes - options.modelBudget.usage.inputBytes,
+							),
+							reportedTokens: Math.max(
+								0,
+								options.modelBudget.limits.maxReportedTokens - options.modelBudget.usage.reportedTokens,
+							),
+						}
+					: undefined,
 				remainingTimeMs: Math.max(0, limits.runTimeoutMs - (Date.now() - startedAt)),
 			};
 		}
@@ -306,17 +323,12 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 			const chooseStrategy = defineTool({
 				name: "choose_strategy",
 				label: "Choose strategy",
-				description: "Choose the next work step or stop the run.",
+				description:
+					"Choose the next work step or stop. Continue retains the current approach; switch replaces it. Evidence IDs default to an empty list. Stop needs only action, reason, and optional evidence IDs.",
 				parameters: strategyToolSchema,
 				executionMode: "sequential",
 				async execute(_id, params) {
 					if (result.closed) throw new Error("This strategic review has ended.");
-					if (!Check(strategyDecisionSchema, params)) {
-						throw new Error(
-							"Work decisions require approach, nextStep, expectedEvidence, reviewWhen, alternative, and concern. Stop requires only action, reason, and evidenceIds.",
-						);
-					}
-					checkEvidence(params.evidenceIds);
 					if (
 						(!currentStrategy && ["continue", "switch"].includes(params.action)) ||
 						(currentStrategy && params.action === "start")
@@ -325,14 +337,25 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 							currentStrategy ? "Use continue, switch, or stop." : "Use start or stop for the first decision.",
 						);
 					}
-					if (params.action === "continue" && params.approach !== currentStrategy?.approach) {
-						throw new Error("Use switch to change the approach.");
+					const decision =
+						params.action === "stop"
+							? { action: params.action, reason: params.reason, evidenceIds: params.evidenceIds ?? [] }
+							: {
+									...params,
+									approach: params.action === "continue" ? currentStrategy?.approach : params.approach,
+									evidenceIds: params.evidenceIds ?? [],
+								};
+					if (!Check(strategyDecisionSchema, decision)) {
+						throw new Error(
+							"Work decisions require approach, nextStep, expectedEvidence, reviewWhen, alternative, and concern. Stop requires only action, reason, and evidenceIds.",
+						);
 					}
-					result.value = structuredClone(params);
+					checkEvidence(decision.evidenceIds);
+					result.value = structuredClone(decision);
 					result.closed = true;
 					return {
 						content: [{ type: "text", text: "Strategy decision recorded." }],
-						details: params,
+						details: decision,
 						terminate: true,
 					};
 				},

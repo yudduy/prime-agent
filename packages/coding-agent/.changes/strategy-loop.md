@@ -3,3 +3,4 @@
 - Added a research harness example that preserves job lineage across worker switches and awaits job cancellation.
 - Added shared model request and input budgets, with reported token thresholds, for strategy runs.
 - Added a small CPU benchmark runner with continuous and fresh-worker controls and independent final verification.
+- Fixed strategy continuation to preserve the worker when an approach is reworded, and avoided retries for unused decision fields.

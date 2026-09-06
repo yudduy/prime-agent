@@ -21,7 +21,7 @@ function decision(
 	action: "start" | "continue" | "switch",
 	approach = "Tune the current method",
 	ids: string[] = [],
-): StrategyDecision {
+): Exclude<StrategyDecision, { action: "stop" }> {
 	return {
 		action,
 		approach,
@@ -191,6 +191,30 @@ describe("strategy loop", () => {
 		expect(result.stopReason).toBe("strategy_stop");
 		expect(executions).toBe(0);
 		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
+	it("continues the registered method when its wording changes and normalizes tool-only fields", async () => {
+		const { harness, events, options } = await setup();
+		const { evidenceIds: _ids, ...initial } = decision("start");
+		harness.setResponses([
+			call("choose_strategy", initial),
+			call("report_result", report()),
+			call("choose_strategy", decision("continue", "Apply the same method to the next part")),
+			(context) => {
+				expect(conversation(context)).toContain("Adjusted the candidate.");
+				return call("report_result", report());
+			},
+			call("choose_strategy", { ...decision("continue"), action: "stop", reason: "Enough evidence." }),
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("strategy_stop");
+		expect(result.strategies).toHaveLength(1);
+		expect(result.steps[0].sessionId).toBe(result.steps[1].sessionId);
+		const decisions = events.filter((event) => event.type === "decision").map((event) => event.decision);
+		expect(decisions[0].evidenceIds).toEqual([]);
+		expect(decisions[1]).toMatchObject({ action: "continue", approach: initial.approach });
+		expect(decisions[2]).toEqual({ action: "stop", reason: "Enough evidence.", evidenceIds: [] });
+		expect(harness.getPendingResponseCount()).toBe(0);
 	});
 
 	it("requires a valid strategy decision before dispatch", async () => {
@@ -484,7 +508,10 @@ describe("strategy loop", () => {
 		harness.setResponses([
 			call("choose_strategy", decision("start")),
 			call("report_result", report()),
-			call("choose_strategy", decision("switch", "Try another method")),
+			(context) => {
+				expect(conversation(context)).toContain('"remainingModelBudget":{"requests":2');
+				return call("choose_strategy", decision("switch", "Try another method"));
+			},
 			call("report_result", report()),
 			stop(),
 		]);

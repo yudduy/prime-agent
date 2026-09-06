@@ -35,7 +35,7 @@ export const strategyToolSchema = Type.Object(
 			Type.Literal("stop"),
 		]),
 		reason: text,
-		evidenceIds,
+		evidenceIds: Type.Optional(evidenceIds),
 		approach: Type.Optional(text),
 		nextStep: Type.Optional(text),
 		expectedEvidence: Type.Optional(text),
@@ -173,6 +173,7 @@ type EventData =
 			successCriteria: string;
 			constraints: string[];
 			limits: StrategyLimits;
+			modelBudget?: Readonly<ModelBudgetLimits>;
 			cwd: string;
 	  }
 	| { type: "session_started"; role: "strategist" | "worker"; sessionId: string; sessionFile: string | undefined }

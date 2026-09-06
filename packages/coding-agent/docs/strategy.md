@@ -42,6 +42,8 @@ Use `--output-dir` to choose the parent directory for saved runs. Ctrl-C request
 
 The strategist has only `read_evidence` and `choose_strategy`. Each work decision states the approach, next assignment, expected evidence, review condition, alternative, and strongest concern. The controller validates the decision before dispatching work.
 
+`continue` retains the registered approach even if the strategist rewords it; `nextStep` advances the assignment. Only `switch` changes the approach and creates a new worker. The controller fills omitted evidence IDs with an empty list and discards optional work fields on a stop decision before validating and saving the applied decision. Native transcripts retain the original tool arguments.
+
 Workers use `ipython` by default. Set `task.tools: []` to disable it and supply `task.createTools(context)` for an existing harness's operations. Custom tools are enabled for workers only and must honor their abort signal and await their own work. Add instructions through `task.initialContext` or `resourceLoader`. The loader's context files, skills, and prompts remain available; extension lifecycle hooks are excluded from managed sessions.
 
 Workers finish each step with `report_result`. Reports contain claims about changes, observations, artifact paths, and unresolved questions. The controller separately saves actual tool outputs and assigns evidence IDs that either role can read. It does not turn a report into a verified measurement or execute artifact paths supplied by a model.
@@ -63,6 +65,8 @@ Each new run directory contains `history.jsonl`, native session transcripts unde
 The host enforces these limits. The final work step still gets a review, but another work step cannot start after `maxSteps`. Cancellation stops model/tool activity and awaits cleanup before closing or replacing the session. A custom tool that ignores cancellation can delay cleanup; the controller will not start another worker while it remains active.
 
 For a shared model budget, pass `modelBudget: new ModelBudget({ maxRequests: 12, maxInputBytes: 400_000, maxReportedTokens: 30_000 })`. Import `ModelBudget` from the SDK. It counts both roles, replacement sessions, repeated input, and cached tokens. Requests and cumulative serialized context bytes are checked before dispatch. The reported-token threshold is checked between responses, so one response can exceed it; this is not a hard billing cap. A request without usable usage data stops further requests and leaves an error. `result.modelBudget` records the limits and counts.
+
+The initial history event records the model limits, and each fresh strategist receives the remaining requests, input bytes, and reported tokens alongside the work-step and time limits.
 
 Budgeted strategy runs disable automatic compaction to prevent uncounted compaction requests. The budget requests SSE transport and zero provider retries; providers must support those options. Codex SSE honors both. A caller can attach the same budget to other sequential agents with `modelBudget.attach(agent)`, while disabling compaction and automatic retries in those sessions too.
 
