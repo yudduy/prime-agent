@@ -324,7 +324,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 				name: "choose_strategy",
 				label: "Choose strategy",
 				description:
-					"Choose the next work step or stop. Continue retains the current approach; switch replaces it. Evidence IDs default to an empty list. Stop needs only action, reason, and optional evidence IDs.",
+					"Choose the next work step or stop. Start, continue, and switch require reason, approach, nextStep, expectedEvidence, reviewWhen, alternative, and concern as separate fields. Continue retains the current approach; switch replaces it. Stop needs only action and reason. evidenceIds is optional for every decision and defaults to an empty list.",
 				parameters: strategyToolSchema,
 				executionMode: "sequential",
 				async execute(_id, params) {
