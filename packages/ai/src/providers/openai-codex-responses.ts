@@ -49,6 +49,41 @@ const DEFAULT_MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
 const CODEX_TOOL_CALL_PROVIDERS = new Set(["openai", "openai-codex", "opencode"]);
 const WEBSOCKET_MESSAGE_TOO_BIG_CLOSE_CODE = 1009;
+const TRANSPORT_ERROR_NAMES = new Set([
+	"Error",
+	"TypeError",
+	"AggregateError",
+	"SocketError",
+	"ConnectTimeoutError",
+	"HeadersTimeoutError",
+	"BodyTimeoutError",
+]);
+const TRANSPORT_ERROR_CODES = new Set([
+	"ECONNRESET",
+	"ECONNREFUSED",
+	"ECONNABORTED",
+	"ETIMEDOUT",
+	"EPIPE",
+	"ENOTFOUND",
+	"EAI_AGAIN",
+	"EHOSTUNREACH",
+	"ENETUNREACH",
+	"UND_ERR_SOCKET",
+	"UND_ERR_CONNECT_TIMEOUT",
+	"UND_ERR_HEADERS_TIMEOUT",
+	"UND_ERR_BODY_TIMEOUT",
+	"UND_ERR_ABORTED",
+	"UND_ERR_DESTROYED",
+	"UND_ERR_CLOSED",
+	"UND_ERR_RES_CONTENT_LENGTH_MISMATCH",
+	"UND_ERR_REQ_CONTENT_LENGTH_MISMATCH",
+	"ERR_TLS_CERT_ALTNAME_INVALID",
+	"CERT_HAS_EXPIRED",
+	"DEPTH_ZERO_SELF_SIGNED_CERT",
+	"SELF_SIGNED_CERT_IN_CHAIN",
+	"UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+	"UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+]);
 
 const CODEX_RESPONSE_STATUSES = new Set<CodexResponseStatus>([
 	"completed",
@@ -92,6 +127,30 @@ function isRetryableError(status: number, errorText: string): boolean {
 		return true;
 	}
 	return /rate.?limit|overloaded|service.?unavailable|upstream.?connect|connection.?refused/i.test(errorText);
+}
+
+function recordSseTransportFailure(output: AssistantMessage, error: unknown, attempt: number): void {
+	const chain: Array<{ name: string; code?: string }> = [];
+	const seen = new Set<object>();
+	let current = error;
+	while (current && typeof current === "object" && !seen.has(current) && chain.length < 4) {
+		seen.add(current);
+		const { name, code, cause } = current as { name?: unknown; code?: unknown; cause?: unknown };
+		chain.push({
+			name: typeof name === "string" && TRANSPORT_ERROR_NAMES.has(name) ? name : "Error",
+			code: typeof code === "string" && TRANSPORT_ERROR_CODES.has(code) ? code : undefined,
+		});
+		current = cause;
+	}
+	// The shared helper does not redact errors, so never pass it the original message, stack, or cause.
+	const diagnostic = createAssistantMessageDiagnostic("provider_transport_failure", "SSE transport failed.", {
+		transport: "sse",
+		phase: "before_response_headers",
+		attempt,
+		causes: chain.slice(1),
+	});
+	diagnostic.error = { ...(chain[0] ?? { name: "Error" }), message: "SSE transport failed." };
+	appendAssistantMessageDiagnostic(output, diagnostic);
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -223,6 +282,7 @@ export const streamOpenAICodexResponses: StreamFunction<"openai-codex-responses"
 					throw new Error("Request was aborted");
 				}
 
+				let receivedResponse = false;
 				try {
 					response = await fetch(resolveCodexUrl(model.baseUrl), {
 						method: "POST",
@@ -230,6 +290,7 @@ export const streamOpenAICodexResponses: StreamFunction<"openai-codex-responses"
 						body: bodyJson,
 						signal: options?.signal,
 					});
+					receivedResponse = true;
 					await options?.onResponse?.(
 						{ status: response.status, headers: headersToRecord(response.headers) },
 						model,
@@ -258,6 +319,8 @@ export const streamOpenAICodexResponses: StreamFunction<"openai-codex-responses"
 							throw new Error("Request was aborted");
 						}
 					}
+					if (!receivedResponse && !options?.signal?.aborted)
+						recordSseTransportFailure(output, error, attempt + 1);
 					lastError = error instanceof Error ? error : new Error(String(error));
 					if (attempt < maxRetries && !lastError.message.includes("usage limit")) {
 						const delayMs = BASE_DELAY_MS * 2 ** attempt;

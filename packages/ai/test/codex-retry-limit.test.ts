@@ -51,6 +51,8 @@ describe.each(["HTTP 429", "transport error"])("Codex retry limit after %s", (fa
 		expect(fetchMock).toHaveBeenCalledTimes(expectedRequests);
 		expect(result.stopReason).toBe("error");
 		expect(result.errorMessage).toContain(failure === "transport error" ? "Connection failed" : "usage limit");
+		if (failure === "HTTP 429") expect(result.diagnostics).toBeUndefined();
+		else expect(result.diagnostics).toHaveLength(expectedRequests);
 	});
 });
 
@@ -76,7 +78,73 @@ it.each(["sse", "auto"] as const)(
 		}).result();
 
 		expect(result.stopReason).toBe("aborted");
+		expect(result.diagnostics).toBeUndefined();
 		expect(fetchMock).not.toHaveBeenCalled();
 		expect(websocketMock).not.toHaveBeenCalled();
 	},
 );
+
+it("records safe SSE failure causes without retrying or persisting sensitive error fields", async () => {
+	const secret = "sentinel-secret-in-transport-error";
+	const cause = Object.assign(new Error(secret), {
+		code: "UND_ERR_SOCKET",
+		stack: secret,
+		headers: { authorization: secret },
+		body: secret,
+		cause: Object.assign(new Error(secret), { code: "ECONNRESET", stack: secret, token: secret }),
+	});
+	const error = new TypeError("fetch failed", { cause });
+	const fetchMock = vi.fn(async () => {
+		throw error;
+	});
+	vi.stubGlobal("fetch", fetchMock);
+
+	const result = await streamSimpleOpenAICodexResponses(model, context, {
+		apiKey,
+		transport: "sse",
+		maxRetries: 0,
+	}).result();
+
+	expect(fetchMock).toHaveBeenCalledTimes(1);
+	expect(result.stopReason).toBe("error");
+	expect(result.errorMessage).toBe("fetch failed");
+	expect(result.usage.totalTokens).toBe(0);
+	expect(result.diagnostics).toEqual([
+		{
+			type: "provider_transport_failure",
+			timestamp: expect.any(Number),
+			error: { name: "TypeError", message: "SSE transport failed.", code: undefined },
+			details: {
+				transport: "sse",
+				phase: "before_response_headers",
+				attempt: 1,
+				causes: [
+					{ name: "Error", code: "UND_ERR_SOCKET" },
+					{ name: "Error", code: "ECONNRESET" },
+				],
+			},
+		},
+	]);
+	expect(JSON.stringify(result.diagnostics)).not.toContain(secret);
+	expect(JSON.stringify(result.diagnostics)).not.toContain(apiKey);
+	expect(JSON.stringify(result.diagnostics)).not.toContain("stack");
+});
+
+it("omits unknown cause names and codes and bounds cyclic cause chains", async () => {
+	const secret = "sentinel-private-cause";
+	const cause = { name: secret, code: secret, cause: {} };
+	cause.cause = cause;
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async () => {
+			throw new TypeError("fetch failed", { cause });
+		}),
+	);
+	const result = await streamSimpleOpenAICodexResponses(model, context, {
+		apiKey,
+		transport: "sse",
+		maxRetries: 0,
+	}).result();
+	expect(result.diagnostics?.[0].details?.causes).toEqual([{ name: "Error", code: undefined }]);
+	expect(JSON.stringify(result.diagnostics)).not.toContain(secret);
+});
