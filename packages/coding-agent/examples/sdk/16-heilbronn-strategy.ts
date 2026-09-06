@@ -20,7 +20,13 @@ import { checkConstruction, compareScores, exceedsScore } from "./heilbronn.js";
 import { startResearchContainer } from "./research-container.js";
 import { runControl } from "./strategy-controls.js";
 
-const limits = { maxSteps: 20, maxWorkerTurns: 8, maxReviewTurns: 3, stepTimeoutMs: 180_000, runTimeoutMs: 1_200_000 };
+export const heilbronnLimits = {
+	maxSteps: 20,
+	maxWorkerTurns: 4,
+	maxReviewTurns: 3,
+	stepTimeoutMs: 1_200_000,
+	runTimeoutMs: 1_200_000,
+};
 const modelLimits = { maxRequests: 80, maxInputBytes: 4_000_000, maxReportedTokens: 300_000 };
 const improvementThreshold = "0.03652989988004";
 const settings = { compaction: { enabled: false }, retry: { enabled: false }, autoRefine: { enabled: false } };
@@ -42,7 +48,8 @@ const initialContext =
 	"Save progress during long searches and split them into commands. No background work survives a command. " +
 	"The full attempt has 20 minutes, 80 model requests, 4,000,000 cumulative input bytes, and a 300,000 reported-token " +
 	"threshold including repeated/cached input. The first limit reached stops work; one response can overshoot the token threshold. " +
-	"Return report_result after each bounded step, with needsReview=true when work remains. Stop only if further pursuit " +
+	"Each work step ends after at most four completed assistant turns; there is no shorter step time limit within the " +
+	"20-minute attempt. Return report_result within that step, with needsReview=true when work remains. Stop only if further pursuit " +
 	"is not worthwhile or you are finished. Report failed searches and conflicting evidence. The starting score is not a discovery.";
 const scoreScript = `import itertools, json, sys
 import numpy as np
@@ -124,6 +131,9 @@ async function main(): Promise<void> {
 	);
 	await save(outputDir, "config.json", {
 		createdAt: new Date().toISOString(),
+		protocolVersion: 2,
+		protocolChange:
+			"Replaced 180-second work-step aborts with four completed assistant turns; the twenty-minute attempt deadline is unchanged.",
 		objective,
 		initialContext,
 		image: values.image,
@@ -131,7 +141,7 @@ async function main(): Promise<void> {
 		baseline,
 		improvementThreshold,
 		model: { provider: "openai-codex", id: values.model, thinkingLevel: "high", serviceTier: "default" },
-		limitsPerAttempt: limits,
+		limitsPerAttempt: heilbronnLimits,
 		modelLimitsPerAttempt: modelLimits,
 		order,
 		sourceHashes,
@@ -212,9 +222,9 @@ async function main(): Promise<void> {
 			let firstImprovementMs: number | null = null;
 			const modelBudget = new ModelBudget(modelLimits);
 			const started = Date.now();
-			const timer = setTimeout(() => workAbort.abort(), limits.runTimeoutMs);
+			const timer = setTimeout(() => workAbort.abort(), heilbronnLimits.runTimeoutMs);
 			const remaining = () => ({
-				milliseconds: Math.max(0, limits.runTimeoutMs - (Date.now() - started)),
+				milliseconds: Math.max(0, heilbronnLimits.runTimeoutMs - (Date.now() - started)),
 				requests: Math.max(0, modelLimits.maxRequests - modelBudget.usage.requests),
 				reportedTokens: Math.max(0, modelLimits.maxReportedTokens - modelBudget.usage.reportedTokens),
 			});
@@ -351,7 +361,7 @@ async function main(): Promise<void> {
 									createTools: () => customTools,
 								},
 								settings,
-								limits,
+								limits: heilbronnLimits,
 								modelBudget,
 								outputDir: trialDir,
 								signal,
@@ -365,9 +375,9 @@ async function main(): Promise<void> {
 								modelBudget,
 								outputDir: trialDir,
 								signal,
-								maxSteps: limits.maxSteps,
-								maxTurns: limits.maxWorkerTurns,
-								stepTimeoutMs: limits.stepTimeoutMs,
+								maxSteps: heilbronnLimits.maxSteps,
+								maxTurns: heilbronnLimits.maxWorkerTurns,
+								stepTimeoutMs: heilbronnLimits.stepTimeoutMs,
 							});
 				clearTimeout(timer);
 				await save(trialDir, "agent-result.json", result);
