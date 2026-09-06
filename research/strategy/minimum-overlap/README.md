@@ -29,6 +29,7 @@ Run the following from `packages/coding-agent`. Replace `/tmp/prime-overlap` wit
 mkdir -p /tmp/prime-overlap
 python3 ../../research/strategy/minimum-overlap/checker/prepare-baseline.py --output /tmp/prime-overlap/baseline.json
 npx tsx --tsconfig ../../tsconfig.json ../../research/strategy/minimum-overlap/checker/overlap.test.ts
+npx tsx --tsconfig ../../tsconfig.json ../../research/strategy/minimum-overlap/codex-account.test.ts
 npx tsx --tsconfig ../../tsconfig.json ../../research/strategy/minimum-overlap/checker/verify-baseline.ts /tmp/prime-overlap/baseline.json
 npx tsx --tsconfig ../../tsconfig.json ../../research/strategy/minimum-overlap/run.mts --seed-file /tmp/prime-overlap/baseline.json --image sha256:IMAGE_ID --output-dir /tmp/prime-overlap/checks --dry-run
 python3 ../../research/strategy/minimum-overlap/cancellation.test.py --seed-file /tmp/prime-overlap/baseline.json --image sha256:IMAGE_ID --output-dir /tmp/prime-overlap/checks
@@ -38,10 +39,10 @@ python3 ../../research/strategy/minimum-overlap/cancellation.test.py --seed-file
 
 ## Run
 
-Omitting `--dry-run` makes real model requests with Prime's configured authentication. The default is `openai-codex/gpt-5.5` at high reasoning effort. Confirm that Prime is configured for the account intended to fund the comparison before launching it.
+Omitting `--dry-run` makes real model requests. The default model is `openai-codex/gpt-5.5` at high reasoning effort. Pass `--codex-auth-file` to use an existing Codex account directly. The runner reads its access token into memory, uses the built-in model registry, and leaves both Codex and Prime logins unchanged. It rejects missing, malformed, or soon-expiring credentials; it does not refresh them. Without this option, the runner uses Prime's configured authentication.
 
 ```sh
-npx tsx --tsconfig ../../tsconfig.json ../../research/strategy/minimum-overlap/run.mts --seed-file /tmp/prime-overlap/baseline.json --image sha256:IMAGE_ID --output-dir /tmp/prime-overlap/runs
+npx tsx --tsconfig ../../tsconfig.json ../../research/strategy/minimum-overlap/run.mts --seed-file /tmp/prime-overlap/baseline.json --image sha256:IMAGE_ID --output-dir /tmp/prime-overlap/runs --codex-auth-file "$HOME/.codex/auth.json"
 ```
 
 Each invocation prints a new output directory containing the protocol, source hashes, native transcripts, strategy history, command records, candidate checks, container snapshots, and results. `status.json` tracks progress; `results.jsonl` contains completed arm summaries. Interrupting the process cancels active work and awaits container cleanup. A failed or incomplete pair remains incomplete; inspect its saved failure before deciding whether to authorize a new run.

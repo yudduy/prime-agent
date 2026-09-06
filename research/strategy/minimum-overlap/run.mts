@@ -23,6 +23,7 @@ import {
 } from "../../../packages/coding-agent/src/index.js";
 import { createHarness } from "../../../packages/coding-agent/test/suite/harness.js";
 import { checkConstruction, compareScores, improvesBaseline } from "./checker/overlap.js";
+import { loadCodexAccount } from "./codex-account.js";
 
 export const overlapLimits = {
 	maxSteps: 3,
@@ -129,6 +130,7 @@ async function main(): Promise<void> {
 			image: { type: "string" },
 			"output-dir": { type: "string" },
 			model: { type: "string", default: "gpt-5.5" },
+			"codex-auth-file": { type: "string" },
 			"preflight-only": { type: "boolean" },
 			"dry-run": { type: "boolean" },
 			help: { type: "boolean" },
@@ -136,7 +138,7 @@ async function main(): Promise<void> {
 	});
 	if (values.help) {
 		console.log(
-			"Usage: npx tsx --tsconfig /path/to/prime/tsconfig.json research/strategy/minimum-overlap/run.mts --seed-file /path/to/prepared-baseline.json --image sha256:IMAGE_ID --output-dir /path/to/runs [--model gpt-5.5] [--preflight-only | --dry-run]",
+			"Usage: npx tsx --tsconfig /path/to/prime/tsconfig.json research/strategy/minimum-overlap/run.mts --seed-file /path/to/prepared-baseline.json --image sha256:IMAGE_ID --output-dir /path/to/runs [--model gpt-5.5] [--codex-auth-file /path/to/codex/auth.json] [--preflight-only | --dry-run]",
 		);
 		return;
 	}
@@ -167,6 +169,7 @@ async function main(): Promise<void> {
 	const sourceFiles = [
 		fileURLToPath(import.meta.url),
 		fileURLToPath(new URL("./checker/overlap.ts", import.meta.url)),
+		fileURLToPath(new URL("./codex-account.ts", import.meta.url)),
 		...["index.ts", "budget.ts", "session.ts", "evidence.ts"].map((name) =>
 			join(sourceDir, "packages/coding-agent/src/core/strategy", name),
 		),
@@ -188,6 +191,13 @@ async function main(): Promise<void> {
 		seedHash: hash(seedSource),
 		baseline,
 		minimumGain,
+		authenticationSource: values["dry-run"]
+			? "faux"
+			: values["preflight-only"]
+				? "none"
+				: values["codex-auth-file"]
+					? "selected_codex_account"
+					: "prime_configuration",
 		model: {
 			provider: "openai-codex",
 			id: values.model,
@@ -273,8 +283,14 @@ async function main(): Promise<void> {
 			return;
 		}
 		harness = values["dry-run"] ? await createHarness() : undefined;
-		const authStorage = harness?.authStorage ?? AuthStorage.create();
-		const modelRegistry = harness?.session.modelRegistry ?? ModelRegistry.create(authStorage);
+		const authStorage =
+			harness?.authStorage ??
+			(values["codex-auth-file"]
+				? await loadCodexAccount(values["codex-auth-file"], Date.now() + 2 * overlapLimits.runTimeoutMs + 120_000)
+				: AuthStorage.create());
+		const modelRegistry =
+			harness?.session.modelRegistry ??
+			(values["codex-auth-file"] ? ModelRegistry.inMemory(authStorage) : ModelRegistry.create(authStorage));
 		const model =
 			harness?.getModel() ??
 			(await modelRegistry.getExecutableModels()).find(
