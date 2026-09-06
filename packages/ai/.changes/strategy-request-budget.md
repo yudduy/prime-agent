@@ -1,2 +1,3 @@
 - Fixed Codex SSE requests to honor configured retry limits and cancel before opening a connection when the payload callback aborts the request.
 - Added safe Codex SSE connection diagnostics with transport error codes, cause chains, and request attempts.
+- Changed Codex SSE diagnostics to preserve standard header-overflow and HTTP-parser error names.

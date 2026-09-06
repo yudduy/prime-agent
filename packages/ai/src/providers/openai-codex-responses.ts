@@ -56,6 +56,8 @@ const TRANSPORT_ERROR_NAMES = new Set([
 	"SocketError",
 	"ConnectTimeoutError",
 	"HeadersTimeoutError",
+	"HeadersOverflowError",
+	"HTTPParserError",
 	"BodyTimeoutError",
 ]);
 const TRANSPORT_ERROR_CODES = new Set([
@@ -71,6 +73,7 @@ const TRANSPORT_ERROR_CODES = new Set([
 	"UND_ERR_SOCKET",
 	"UND_ERR_CONNECT_TIMEOUT",
 	"UND_ERR_HEADERS_TIMEOUT",
+	"UND_ERR_HEADERS_OVERFLOW",
 	"UND_ERR_BODY_TIMEOUT",
 	"UND_ERR_ABORTED",
 	"UND_ERR_DESTROYED",

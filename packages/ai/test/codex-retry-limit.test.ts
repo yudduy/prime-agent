@@ -148,3 +148,34 @@ it("omits unknown cause names and codes and bounds cyclic cause chains", async (
 	expect(result.diagnostics?.[0].details?.causes).toEqual([{ name: "Error", code: undefined }]);
 	expect(JSON.stringify(result.diagnostics)).not.toContain(secret);
 });
+
+it.each([
+	{ name: "HeadersOverflowError", code: "UND_ERR_HEADERS_OVERFLOW" },
+	{ name: "HTTPParserError", code: undefined },
+])("preserves the standard $name cause without exposing response data", async ({ name, code }) => {
+	const secret = "sentinel-private-response-data";
+	const cause = Object.assign(new Error(secret), { name, code, stack: secret, data: secret });
+	const fetchMock = vi.fn(async () => {
+		throw new TypeError("fetch failed", { cause });
+	});
+	vi.stubGlobal("fetch", fetchMock);
+	const result = await streamSimpleOpenAICodexResponses(model, context, {
+		apiKey,
+		transport: "sse",
+		maxRetries: 0,
+	}).result();
+
+	expect(fetchMock).toHaveBeenCalledTimes(1);
+	expect(result.stopReason).toBe("error");
+	expect(result.errorMessage).toBe("fetch failed");
+	expect(result.usage.totalTokens).toBe(0);
+	expect(result.diagnostics?.[0].details).toEqual({
+		transport: "sse",
+		phase: "before_response_headers",
+		attempt: 1,
+		causes: [{ name, code }],
+	});
+	expect(JSON.stringify(result.diagnostics)).not.toContain(secret);
+	expect(JSON.stringify(result.diagnostics)).not.toContain(apiKey);
+	expect(JSON.stringify(result.diagnostics)).not.toContain("stack");
+});
