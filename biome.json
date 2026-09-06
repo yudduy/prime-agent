@@ -34,6 +34,8 @@
 			"packages/*/src/**/*.ts",
 			"packages/*/test/**/*.ts",
 			"packages/coding-agent/examples/**/*.ts",
+			"research/strategy/minimum-overlap/**/*.ts",
+			"research/strategy/minimum-overlap/**/*.mts",
 			"!**/node_modules/**/*",
 			"!**/test-sessions.ts",
 			"!**/models.generated.ts",
