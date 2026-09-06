@@ -4,3 +4,4 @@
 - Added shared model request and input budgets, with reported token thresholds, for strategy runs.
 - Added a small CPU benchmark runner with continuous and fresh-worker controls and independent final verification.
 - Fixed strategy continuation to preserve the worker when an approach is reworded, and avoided retries for unused decision fields.
+- Added a bounded CPU research example comparing strategy and continuous agents on Heilbronn constructions with exact host verification.

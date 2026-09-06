@@ -1,0 +1,4 @@
+FROM python:3.13-slim@sha256:9d2e5553305c7c7b0097999bb17187c69b921ccd6bc9d40e4bb5ebe652c00285
+RUN pip install --no-cache-dir --only-binary=:all: numpy==2.3.3 scipy==1.16.3
+ENV OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 PYTHONUNBUFFERED=1
+WORKDIR /app
