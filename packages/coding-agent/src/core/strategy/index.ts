@@ -491,6 +491,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 				step,
 				strategyId: currentStrategy.id,
 				sessionId: session.sessionId,
+				assignment: structuredClone(decision),
 				status: result.status,
 				report: result.value,
 				error: result.error,

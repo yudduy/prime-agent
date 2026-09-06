@@ -91,6 +91,7 @@ describe("strategy tasks", () => {
 				expect(context.runId).toBe(observedRunId);
 				expect(work.report?.observations).toEqual(["The claim is proved."]);
 				work.report!.observations = ["This mutation must not change the saved worker claim"];
+				work.assignment.expectedEvidence = "This mutation must not change the controller's assignment";
 				return ++checkedSteps === 1
 					? {
 							status: "failed",
@@ -133,6 +134,7 @@ describe("strategy tasks", () => {
 		expect(createTools).toHaveBeenCalledTimes(1);
 		expect(result.steps[0].sessionId).not.toBe(result.steps[1].sessionId);
 		expect(result.steps[0].report?.observations).toEqual(["The claim is proved."]);
+		expect(result.steps[0].assignment.expectedEvidence).toBe("A proof or counterexample.");
 		expect(result.steps[0].evidence.map((entry) => entry.source)).toEqual(["tool", "check"]);
 		expect(result.steps[0].evidence[1].preview).toContain("[Preview truncated.");
 		expect(result.steps[1].evidence[0].preview).not.toContain("[Preview truncated.");

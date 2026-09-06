@@ -136,6 +136,8 @@ export interface WorkResult {
 	step: number;
 	strategyId: string;
 	sessionId: string;
+	/** The controller's assignment, separate from the worker's account of what happened. */
+	assignment: Exclude<StrategyDecision, { action: "stop" }>;
 	status: "reported" | "incomplete" | "turn_limit" | "timeout" | "cancelled" | "error";
 	report?: WorkReport;
 	error?: string;

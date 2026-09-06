@@ -7,3 +7,4 @@
 - Added a bounded CPU research example comparing strategy and continuous agents on Heilbronn constructions with exact host verification.
 - Clarified which fields a strategist must provide when assigning work or stopping.
 - Marked shortened evidence previews and added visible paging instructions when reading saved records.
+- Preserved each work assignment with its result so fresh reviews and task checks retain the expected evidence and reconsideration condition.

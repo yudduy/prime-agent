@@ -194,6 +194,48 @@ describe("strategy loop", () => {
 		expect(harness.getPendingResponseCount()).toBe(1);
 	});
 
+	it.each(["reported", "turn_limit", "error"] as const)(
+		"preserves each assignment for fresh review after %s work, continuation, and switching",
+		async (status) => {
+			const assignments = (["start", "continue", "switch"] as const).map((action, index) => ({
+				...decision(action),
+				nextStep: `Run test ${index + 1}.`,
+				expectedEvidence: `Observation that distinguishes explanation ${index + 1}.`,
+				reviewWhen: `Reconsider if prediction ${index + 1} fails.`,
+			}));
+			const { harness, options, events } = await setup({ limits: { maxWorkerTurns: 1 } });
+			const work = () =>
+				status === "reported"
+					? call("report_result", report())
+					: fauxAssistantMessage("Private worker reasoning", {
+							stopReason: status === "error" ? "error" : "stop",
+							errorMessage: status === "error" ? "fixture execution failed" : undefined,
+						});
+			harness.setResponses([
+				call("choose_strategy", assignments[0]),
+				work(),
+				...assignments.flatMap((assignment, index) => [
+					(context: Context) => {
+						const state = JSON.parse(getMessageText(context.messages[0]).split("\n").slice(1).join("\n"));
+						expect(state.latestResult).toMatchObject({ assignment, status });
+						expect(conversation(context)).not.toContain("Private worker reasoning");
+						return index < 2 ? call("choose_strategy", assignments[index + 1]) : stop();
+					},
+					...(index < 2 ? [work()] : []),
+				]),
+			]);
+			const result = await runWithStrategy(options);
+			expect(result.stopReason).toBe("strategy_stop");
+			expect(result.steps).toMatchObject(assignments.map((assignment) => ({ assignment, status })));
+			expect(result.steps[0].sessionId).toBe(result.steps[1].sessionId);
+			expect(result.steps[2].sessionId).not.toBe(result.steps[1].sessionId);
+			expect(events.filter((event) => event.type === "step_finished").map((event) => event.result)).toEqual(
+				result.steps,
+			);
+			expect(harness.getPendingResponseCount()).toBe(0);
+		},
+	);
+
 	it("continues the registered method when its wording changes and normalizes tool-only fields", async () => {
 		const { harness, events, options } = await setup();
 		const { evidenceIds: _ids, ...initial } = decision("start");
