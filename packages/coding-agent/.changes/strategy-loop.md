@@ -8,3 +8,4 @@
 - Clarified which fields a strategist must provide when assigning work or stopping.
 - Marked shortened evidence previews and added visible paging instructions when reading saved records.
 - Preserved each work assignment with its result so fresh reviews and task checks retain the expected evidence and reconsideration condition.
+- Included bounded excerpts of the latest tool records in strategic reviews while keeping complete evidence available to read.

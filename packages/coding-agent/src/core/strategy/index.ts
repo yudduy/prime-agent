@@ -13,6 +13,7 @@ import { createAgentSession } from "../sdk.js";
 import { SessionManager } from "../session-manager.js";
 import { SettingsManager } from "../settings-manager.js";
 import { checkResult } from "./check.js";
+import { readLatestToolRecords } from "./evidence.js";
 import { errorText, PendingWork, type ResultSlot, runSession } from "./session.js";
 import {
 	DEFAULT_STRATEGY_LIMITS,
@@ -339,6 +340,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 		}
 
 		async function reviewStrategy(): Promise<StrategyDecision> {
+			const latestToolRecords = await readLatestToolRecords(steps.at(-1)?.evidence ?? []);
 			const result: ResultSlot<StrategyDecision> = { closed: false };
 			const chooseStrategy = defineTool({
 				name: "choose_strategy",
@@ -390,7 +392,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 					maxTurns: limits.maxReviewTurns,
 					timeoutMs: limits.stepTimeoutMs,
 					signal: runAbort.signal,
-					prompt: `Review the task and choose the next step.\n${JSON.stringify({ ...taskContext(), evidence: [...evidence.values()] })}`,
+					prompt: `Review the task and choose the next step.\n${JSON.stringify({ ...taskContext(), evidence: [...evidence.values()], latestToolRecords })}`,
 				});
 				if (!review.value)
 					throw new Error(`Strategic review ${review.status}: ${review.error ?? "no valid decision returned"}`);

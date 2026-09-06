@@ -373,7 +373,7 @@ describe("strategy loop", () => {
 			call("measure", {}),
 			call("report_result", report(["evidence-1"])),
 			(context) => {
-				expect(conversation(context)).not.toContain("full-output-proof");
+				expect(conversation(context)).toContain("full-output-proof");
 				return call("read_evidence", { id: "../../not-registered" });
 			},
 			(context) => {
@@ -381,11 +381,113 @@ describe("strategy loop", () => {
 				return call("read_evidence", { id: "evidence-1" });
 			},
 			(context) => {
-				expect(conversation(context)).toContain("full-output-proof");
+				expect(getMessageText(context.messages.at(-1))).toContain("full-output-proof");
 				return stop();
 			},
 		]);
 		expect((await runWithStrategy(options)).stopReason).toBe("strategy_stop");
+	});
+
+	it("shows the latest execution without a worker report and keeps older records readable", async () => {
+		const contradiction = `${"trial\n".repeat(600)}The full search ran and contradicted the prediction.`;
+		const measure = defineTool({
+			name: "measure",
+			label: "Measure",
+			description: "Run the supplied search.",
+			parameters: Type.Object({ script: Type.String() }),
+			async execute(_id, params) {
+				return {
+					content: [
+						{ type: "text", text: params.script === "first search" ? contradiction : "Second search completed." },
+						{ type: "image", mimeType: "image/png", data: "unshown-image-data" },
+					],
+					details: { note: "unshown-machine-details" },
+				};
+			},
+		});
+		const { harness, options } = await setup({ customTools: [measure], limits: { maxWorkerTurns: 1 } });
+		harness.setResponses([
+			call("choose_strategy", decision("start")),
+			call("measure", { script: "first search" }),
+			(context) => {
+				const state = JSON.parse(getMessageText(context.messages[0]).split("\n").slice(1).join("\n"));
+				expect(state.latestResult).toMatchObject({ status: "turn_limit" });
+				expect(state.latestResult.report).toBeUndefined();
+				expect(state.latestToolRecords.records).toHaveLength(1);
+				expect(state.latestToolRecords.records[0]).toEqual({
+					id: "evidence-1",
+					tool: "measure",
+					isError: false,
+					arguments: { script: "first search" },
+					result: [{ type: "text", text: contradiction }],
+				});
+				expect(conversation(context)).not.toContain("unshown-image-data");
+				expect(conversation(context)).not.toContain("unshown-machine-details");
+				return call("choose_strategy", decision("continue"));
+			},
+			call("measure", { script: "second search" }),
+			(context) => {
+				const state = JSON.parse(getMessageText(context.messages[0]).split("\n").slice(1).join("\n"));
+				expect(state.latestToolRecords.records.map((record: { id: string }) => record.id)).toEqual(["evidence-2"]);
+				expect(state.evidence.map((record: { id: string }) => record.id)).toEqual(["evidence-1", "evidence-2"]);
+				return call("read_evidence", { id: "evidence-1" });
+			},
+			(context) => {
+				expect(getMessageText(context.messages.at(-1))).toContain("contradicted the prediction");
+				expect(getMessageText(context.messages.at(-1))).toContain("unshown-machine-details");
+				return stop();
+			},
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("strategy_stop");
+		expect(result.steps).toHaveLength(2);
+		expect(harness.getPendingResponseCount()).toBe(0);
+	});
+
+	it("bounds recent execution bytes while preserving error status, record ends, and access to omitted text", async () => {
+		const output = `output-start ${'界"\\\n'.repeat(20_000)}middle-proof ${"trial\n".repeat(20_000)}output-end`;
+		const measure = defineTool({
+			name: "measure",
+			label: "Measure",
+			description: "Run a search.",
+			parameters: Type.Object({ fail: Type.Boolean() }),
+			async execute(_id, params) {
+				if (params.fail) throw new Error(output);
+				return { content: [{ type: "text", text: output }], details: {} };
+			},
+		});
+		const { harness, options, events } = await setup({ customTools: [measure], limits: { maxWorkerTurns: 1 } });
+		harness.setResponses([
+			call("choose_strategy", decision("start")),
+			fauxAssistantMessage([fauxToolCall("measure", { fail: false }), fauxToolCall("measure", { fail: true })], {
+				stopReason: "toolUse",
+			}),
+			async (context) => {
+				const state = JSON.parse(getMessageText(context.messages[0]).split("\n").slice(1).join("\n"));
+				expect(Buffer.byteLength(JSON.stringify(state.latestToolRecords))).toBeLessThanOrEqual(40_000);
+				expect(state.latestToolRecords.records).toMatchObject([
+					{ id: "evidence-1", isError: false },
+					{ id: "evidence-2", isError: true },
+				]);
+				for (const record of state.latestToolRecords.records) {
+					expect(record.excerpt).toContain("output-start");
+					expect(record.excerpt).toContain("output-end");
+					expect(record.excerpt).toContain("[Middle omitted; use read_evidence");
+					expect(record.excerpt).not.toContain("middle-proof");
+				}
+				const event = events.find((event) => event.type === "evidence");
+				if (event?.type !== "evidence") throw new Error("Missing saved evidence");
+				const saved = await readFile(event.evidence.path, "utf8");
+				expect(JSON.parse(saved).result.content[0].text).toBe(output);
+				return call("read_evidence", { id: event.evidence.id, offset: saved.indexOf("middle-proof"), length: 100 });
+			},
+			(context) => {
+				expect(getMessageText(context.messages.at(-1))).toContain("middle-proof");
+				return stop();
+			},
+		]);
+		expect((await runWithStrategy(options)).stopReason).toBe("strategy_stop");
+		expect(harness.getPendingResponseCount()).toBe(0);
 	});
 
 	it("marks incomplete previews and exposes paging instructions when long arguments precede the result", async () => {
@@ -406,17 +508,19 @@ describe("strategy loop", () => {
 			(context) => {
 				expect(conversation(context)).toContain('"status":"turn_limit"');
 				expect(conversation(context)).toContain("[Preview truncated.");
-				expect(conversation(context)).not.toContain("Contradiction:");
+				expect(conversation(context)).toContain("Contradiction:");
 				return call("read_evidence", { id: "evidence-1" });
 			},
 			(context) => {
 				expect(getMessageText(context.messages.at(-1))).toContain('"offset":12000');
-				expect(conversation(context)).not.toContain("Contradiction:");
+				expect(getMessageText(context.messages.at(-1))).not.toContain("Contradiction:");
 				return call("read_evidence", { id: "evidence-1", offset: 12000, length: 20000 });
 			},
 			(context) => {
 				expect(getMessageText(context.messages.at(-1))).toContain("End of saved record.");
-				expect(conversation(context)).toContain("Contradiction: the full search already ran and plateaued.");
+				expect(getMessageText(context.messages.at(-1))).toContain(
+					"Contradiction: the full search already ran and plateaued.",
+				);
 				return stop();
 			},
 		]);
