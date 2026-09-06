@@ -2,6 +2,7 @@ import { type Static, Type } from "typebox";
 import type { ToolDefinition } from "../extensions/index.js";
 import type { CreateAgentSessionOptions } from "../sdk.js";
 import type { Settings } from "../settings-manager.js";
+import type { ModelBudget, ModelBudgetLimits, ModelBudgetUsage } from "./budget.js";
 
 const text = Type.String({ minLength: 1 });
 const evidenceIds = Type.Array(text);
@@ -159,6 +160,7 @@ export interface StrategyRunResult {
 	strategies: Strategy[];
 	steps: WorkResult[];
 	usage: StrategyUsage;
+	modelBudget?: { limits: Readonly<ModelBudgetLimits>; usage: ModelBudgetUsage };
 	outputDir: string;
 	check?: WorkResult["check"];
 }
@@ -199,6 +201,8 @@ export interface StrategyRunOptions
 	task: TaskDefinition;
 	settings?: Partial<Settings>;
 	limits?: Partial<StrategyLimits>;
+	/** Shared model request/input budget. Disables automatic compaction. */
+	modelBudget?: ModelBudget;
 	/** Parent directory for a new run directory. Existing runs are never reopened. */
 	outputDir?: string;
 	signal?: AbortSignal;

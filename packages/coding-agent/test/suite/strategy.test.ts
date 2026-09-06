@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseStrategyArgs } from "../../examples/sdk/14-strategy.js";
 import { defineTool } from "../../src/core/extensions/index.js";
 import {
+	ModelBudget,
 	runWithStrategy,
 	type StrategyDecision,
 	type StrategyRunEvent,
@@ -475,5 +476,65 @@ describe("strategy loop", () => {
 			).toThrow("positive integer");
 		}
 		expect(() => parseStrategyArgs([])).toThrow("--objective");
+	});
+
+	it("shares the model request budget across reviewers and replacement workers", async () => {
+		const modelBudget = new ModelBudget({ maxRequests: 4, maxInputBytes: 1_000_000, maxReportedTokens: 1_000_000 });
+		const { harness, options } = await setup({ modelBudget });
+		harness.setResponses([
+			call("choose_strategy", decision("start")),
+			call("report_result", report()),
+			call("choose_strategy", decision("switch", "Try another method")),
+			call("report_result", report()),
+			stop(),
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("limit_reached");
+		expect(result.assessment).toContain("model request limit");
+		expect(result.strategies).toHaveLength(2);
+		expect(result.modelBudget?.usage.requests).toBe(4);
+		expect(result.modelBudget?.usage.reportedTokens).toBe(
+			result.usage.input + result.usage.output + result.usage.cacheRead + result.usage.cacheWrite,
+		);
+		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
+	it("rejects oversized input before calling the provider", async () => {
+		const modelBudget = new ModelBudget({ maxRequests: 4, maxInputBytes: 1, maxReportedTokens: 1_000_000 });
+		const { harness, options } = await setup({ modelBudget });
+		harness.setResponses([stop()]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("limit_reached");
+		expect(result.assessment).toContain("input byte limit");
+		expect(result.modelBudget?.usage.requests).toBe(0);
+		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
+	it("keeps missing usage as a runtime error and prevents another request", async () => {
+		const modelBudget = new ModelBudget({ maxRequests: 4, maxInputBytes: 1_000_000, maxReportedTokens: 1_000_000 });
+		const { harness, options } = await setup({ modelBudget });
+		harness.setResponses([
+			() => {
+				throw new Error("fixture transport failure");
+			},
+			stop(),
+		]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("error");
+		expect(result.assessment).toContain("fixture transport failure");
+		expect(result.modelBudget?.usage.unreportedRequests).toBe(1);
+		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
+	it("stops after reported token usage reaches the threshold, including cached input", async () => {
+		const modelBudget = new ModelBudget({ maxRequests: 10, maxInputBytes: 1_000_000, maxReportedTokens: 1 });
+		const { harness, options } = await setup({ modelBudget });
+		harness.setResponses([call("choose_strategy", decision("start")), call("report_result", report())]);
+		const result = await runWithStrategy(options);
+		expect(result.stopReason).toBe("limit_reached");
+		expect(result.assessment).toContain("token limit");
+		expect(result.steps).toHaveLength(0);
+		expect(result.modelBudget?.usage.reportedTokens).toBeGreaterThan(1);
+		expect(harness.getPendingResponseCount()).toBe(1);
 	});
 });

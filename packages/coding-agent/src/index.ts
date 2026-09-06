@@ -245,6 +245,9 @@ export { createSyntheticSourceInfo } from "./core/source-info.js";
 export {
 	DEFAULT_STRATEGY_LIMITS,
 	type Evidence,
+	ModelBudget,
+	type ModelBudgetLimits,
+	type ModelBudgetUsage,
 	runWithStrategy,
 	type Strategy,
 	type StrategyDecision,

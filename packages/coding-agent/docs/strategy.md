@@ -62,6 +62,10 @@ Each new run directory contains `history.jsonl`, native session transcripts unde
 
 The host enforces these limits. The final work step still gets a review, but another work step cannot start after `maxSteps`. Cancellation stops model/tool activity and awaits cleanup before closing or replacing the session. A custom tool that ignores cancellation can delay cleanup; the controller will not start another worker while it remains active.
 
+For a shared model budget, pass `modelBudget: new ModelBudget({ maxRequests: 12, maxInputBytes: 400_000, maxReportedTokens: 30_000 })`. Import `ModelBudget` from the SDK. It counts both roles, replacement sessions, repeated input, and cached tokens. Requests and cumulative serialized context bytes are checked before dispatch. The reported-token threshold is checked between responses, so one response can exceed it; this is not a hard billing cap. A request without usable usage data stops further requests and leaves an error. `result.modelBudget` records the limits and counts.
+
+Budgeted strategy runs disable automatic compaction to prevent uncounted compaction requests. The budget requests SSE transport and zero provider retries; providers must support those options. Codex SSE honors both. A caller can attach the same budget to other sequential agents with `modelBudget.attach(agent)`, while disabling compaction and automatic retries in those sessions too.
+
 The loop disables nested delegation, goal/autonomous continuation, session-level automatic retries, and automatic refinement. Worker context compaction remains available. A session that ends without its structured result gets one correction within the remaining limits. An incomplete worker result goes back to review with its runtime status and partial evidence.
 
 ## Task checks
@@ -114,3 +118,9 @@ const result = await runWithStrategy({ task, cwd: projectDirectory });
 The worker can submit a candidate or recall all results in this run, including failed attempts and earlier workers. Submission waits for a terminal job state. On cancellation, the bridge requests cancellation of that job and awaits its terminal state before returning. The controller must report terminal state only after the evaluator's work and cleanup have settled. Each job remains subject to the controller's own resource limits; strategy usage does not meter external compute.
 
 `stopReason` is `strategy_stop`, `limit_reached`, `cancelled`, or `error`. A strategist's assessment can describe completion or a reason to stop pursuing the task. It is separate from the host-owned `check`. The command-line runner supplies no checker, so its assessment alone does not establish verified completion. `usage` sums usage reported on assistant messages, including repeated context. It does not meter external jobs launched by tools.
+
+## Small CPU pilot
+
+`examples/sdk/15-strategy-pilot.ts` compares the strategy loop with a continuous worker and a worker replaced after each bounded step, using two pinned Terminal-Bench 2.1 tasks. All conditions use the configured Codex model at low reasoning effort, the same container command tool, and the same model request/input/time limits. It first checks that blank containers fail and official solutions pass. Use `--help` for checkout paths or `--preflight-only` to validate the apparatus without model calls.
+
+The runner uses Docker directly, preserves candidate files and native transcripts, and injects the official final tests after work has stopped. Tests and solutions remain inaccessible during solving. It saves original verifier reports and rejects incomplete verification as a runtime failure. This is a capped local pilot using official assets, not the full Harbor protocol or evidence of comparative effectiveness. NanoGPT and KernelBench are excluded.

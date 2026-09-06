@@ -32,6 +32,7 @@ import {
 	workReportSchema,
 } from "./types.js";
 
+export { ModelBudget, type ModelBudgetLimits, type ModelBudgetUsage } from "./budget.js";
 export type {
 	Evidence,
 	Strategy,
@@ -219,7 +220,8 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 		async function createSession(role: "strategist" | "worker", tools: ToolDefinition[]): Promise<AgentSession> {
 			runAbort.signal.throwIfAborted();
 			const settingsManager = createSettings();
-			if (role === "strategist") settingsManager.applyOverrides({ compaction: { enabled: false } });
+			if (role === "strategist" || options.modelBudget)
+				settingsManager.applyOverrides({ compaction: { enabled: false } });
 			const extensions = { extensions: [], errors: [], runtime: createExtensionRuntime() };
 			const resourceLoader: ResourceLoader = {
 				getExtensions: () => extensions,
@@ -260,6 +262,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 				prewarmIpythonKernel: false,
 			});
 			sessions.add(session);
+			options.modelBudget?.attach(session.agent);
 			model = session.model;
 			session.agent.toolExecution = "sequential";
 			session.agent.state.tools = session.agent.state.tools.map((tool) => ({
@@ -478,7 +481,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 			await saveEvent({ type: "step_finished", result: work });
 		}
 
-		while (!runAbort.signal.aborted) {
+		while (!runAbort.signal.aborted && !options.modelBudget?.stopReason) {
 			const decision = await reviewStrategy();
 			if (decision.action === "stop") {
 				assessment = decision.reason;
@@ -486,6 +489,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 				break;
 			}
 			if (steps.length >= limits.maxSteps) break;
+			if (options.modelBudget?.stopReason) break;
 			if (decision.action === "start" || decision.action === "switch") {
 				if (currentStrategy) currentStrategy.leftReason = decision.reason;
 				if (workerSession) await closeSession(workerSession);
@@ -523,6 +527,11 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 		stopReason = "error";
 		assessment = hostError;
 	}
+	if (!runAbort.signal.aborted && !hostError && options.modelBudget?.stopReason && stopReason !== "strategy_stop") {
+		const missingUsage = options.modelBudget.usage.unreportedRequests > 0;
+		stopReason = missingUsage ? "error" : "limit_reached";
+		assessment = missingUsage ? `${assessment} ${options.modelBudget.stopReason}` : options.modelBudget.stopReason;
+	}
 	const result: StrategyRunResult = {
 		runId,
 		assessment,
@@ -530,6 +539,9 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 		strategies,
 		steps,
 		usage,
+		modelBudget: options.modelBudget
+			? { limits: options.modelBudget.limits, usage: options.modelBudget.usage }
+			: undefined,
 		outputDir,
 		check: steps.at(-1)?.check,
 	};
