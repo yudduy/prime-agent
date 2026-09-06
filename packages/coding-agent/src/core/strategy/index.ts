@@ -59,6 +59,8 @@ deserve review, but a plateau alone does not require switching. Distinguish exec
 and evidence against an approach. Treat worker reports as claims and inspect recorded evidence when needed.
 Previews may omit decisive results. Read the relevant saved records before concluding that an approach was not
 tested or that an assumption survived the work.
+Saved step records retain earlier assignments, runtime outcomes, worker claims, and host checks. Read them when
+revisiting earlier work; a prior report is not a permanent verdict on an approach.
 Task checks come from the host: failed means the checked criteria were not met; error means the check did not work;
 inconclusive means the evidence does not settle the question. Your assessment is separate from these checks.
 A step can be worthwhile because it tests an assumption or finds a counterexample, even without improving a score.
@@ -116,6 +118,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 	const pendingWork = new PendingWork();
 	const usage: StrategyUsage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0 };
 	let sequence = 0;
+	let recordedOutputs = 0;
 	let currentStrategy: Strategy | undefined;
 	let workerSession: AgentSession | undefined;
 	let workReport: ResultSlot<WorkReport> = { closed: true };
@@ -151,7 +154,8 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 	const readEvidence = defineTool({
 		name: "read_evidence",
 		label: "Read evidence",
-		description: "Read a saved tool output by its evidence ID. Offsets are character offsets in the saved JSON.",
+		description:
+			"Read a saved tool output, task check, or work step by its registered evidence ID. Step records separate assignments, worker reports, execution status, and host checks. Offsets are character offsets in the saved JSON.",
 		parameters: Type.Object({
 			id: Type.String(),
 			offset: Type.Optional(Type.Integer({ minimum: 0 })),
@@ -412,7 +416,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 						const previous = await afterTool?.(context, signal);
 						if (reservedTools.has(context.toolCall.name)) return previous;
 						const output = { ...context.result, ...previous };
-						const id = `evidence-${evidence.size + 1}`;
+						const id = `evidence-${++recordedOutputs}`;
 						const path = join(outputDir, "evidence", `${id}.json`);
 						await writeFile(
 							path,
@@ -506,7 +510,7 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 					context,
 					limits.stepTimeoutMs - (Date.now() - stepStartedAt),
 				);
-				const id = `evidence-${evidence.size + 1}`;
+				const id = `evidence-${++recordedOutputs}`;
 				const path = join(outputDir, "evidence", `${id}.json`);
 				await writeFile(path, JSON.stringify(checked), { flag: "wx", mode: 0o600 });
 				const record: Evidence = {
@@ -525,6 +529,35 @@ export async function runWithStrategy(options: StrategyRunOptions): Promise<Stra
 			}
 			steps.push(work);
 			currentStrategy.steps++;
+			const id = `step-${step}`;
+			const path = join(outputDir, "evidence", `${id}.json`);
+			try {
+				await writeFile(path, JSON.stringify(work), { flag: "wx", mode: 0o600 });
+			} catch (error) {
+				hostError = `Could not save work step: ${errorText(error)}`;
+				throw error;
+			}
+			const record: Evidence = {
+				source: "step",
+				id,
+				path,
+				step,
+				sessionId: session.sessionId,
+				status: work.status,
+				isError: work.status === "error",
+				preview: previewEvidence(
+					JSON.stringify({
+						reportReturned: work.report !== undefined,
+						checkStatus: work.check?.status,
+						assignment: work.assignment.nextStep,
+						error: work.error,
+						workerReport: work.report?.changes,
+						unresolved: work.report?.unresolved,
+					}),
+				),
+			};
+			evidence.set(id, record);
+			await saveEvent({ type: "evidence", evidence: record });
 			await saveEvent({ type: "step_finished", result: work });
 		}
 

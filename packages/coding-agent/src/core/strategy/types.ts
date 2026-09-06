@@ -93,7 +93,11 @@ export type Evidence = {
 	isError: boolean;
 	path: string;
 	preview: string;
-} & ({ source: "tool"; toolName: string; toolCallId: string } | { source: "check" });
+} & (
+	| { source: "tool"; toolName: string; toolCallId: string }
+	| { source: "check" }
+	| { source: "step"; status: WorkResult["status"] }
+);
 
 export const taskCheckSchema = Type.Object(
 	{

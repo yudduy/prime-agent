@@ -236,6 +236,100 @@ describe("strategy loop", () => {
 		},
 	);
 
+	it.each([
+		{ status: "reported", checkStatus: "failed" },
+		{ status: "error", checkStatus: "error" },
+		{ status: "reported", checkStatus: "inconclusive" },
+	] as const)(
+		"retrieves an older $status step and its $checkStatus check after further work and a switch",
+		async ({ status, checkStatus }) => {
+			const firstAssignment = {
+				...decision("start"),
+				nextStep: "Test whether the candidate survives the counterexample.",
+				expectedEvidence: "A counterexample would contradict the working explanation.",
+				reviewWhen: "Revise the explanation if the counterexample is reproduced.",
+			};
+			const firstReport = {
+				...report(),
+				changes: "Earlier work details. ".repeat(300),
+				observations: ["The counterexample contradicts the working explanation."],
+				unresolved: ["older-disagreement-needs-resolution"],
+			};
+			const { harness, options, events } = await setup({ limits: { maxWorkerTurns: 2 } });
+			options.task.checkResult = async (work) => ({
+				status: work.step === 1 ? checkStatus : "passed",
+				summary: `Host assessment of step ${work.step}`,
+				details: `Original host evidence for step ${work.step}`,
+			});
+			function readOldStep(context: Context) {
+				const message = context.messages.at(-1);
+				if (message?.role !== "toolResult" || message.content[0]?.type !== "text") {
+					throw new Error("Expected a saved step result");
+				}
+				const saved = JSON.parse(message.content[0].text);
+				expect(saved).toMatchObject({ step: 1, assignment: firstAssignment, status });
+				expect(saved.check).toMatchObject({
+					status: checkStatus,
+					details: "Original host evidence for step 1",
+					evidenceId: "evidence-1",
+				});
+				if (status === "reported") expect(saved.report).toEqual(firstReport);
+				else {
+					expect(saved.error).toBe("fixture provider failed before measurement");
+					expect(saved.report).toBeUndefined();
+				}
+				return saved;
+			}
+			harness.setResponses([
+				call("choose_strategy", firstAssignment),
+				status === "reported"
+					? call("report_result", firstReport)
+					: fauxAssistantMessage("private-worker-reasoning", {
+							stopReason: "error",
+							errorMessage: "fixture provider failed before measurement",
+						}),
+				call("choose_strategy", decision("continue")),
+				call("report_result", { ...report(), observations: ["The new result supports the working explanation."] }),
+				(context) => {
+					const state = JSON.parse(getMessageText(context.messages[0]).split("\n").slice(1).join("\n"));
+					expect(state.latestResult.step).toBe(2);
+					expect(state.latestResult.check.status).toBe("passed");
+					expect(state.evidence).toContainEqual(
+						expect.objectContaining({ id: "step-1", source: "step", step: 1 }),
+					);
+					expect(conversation(context)).not.toContain("older-disagreement-needs-resolution");
+					expect(conversation(context)).not.toContain("private-worker-reasoning");
+					return call("read_evidence", { id: "step-1", length: 20_000 });
+				},
+				(context) => {
+					readOldStep(context);
+					return call("choose_strategy", decision("switch", "Resolve the conflicting observations", ["step-1"]));
+				},
+				(context) => {
+					expect(conversation(context)).not.toContain("private-worker-reasoning");
+					return call("read_evidence", { id: "step-1", length: 20_000 });
+				},
+				(context) => {
+					readOldStep(context);
+					return call("report_result", report(["step-1"]));
+				},
+				stop(),
+			]);
+			const result = await runWithStrategy(options);
+			expect(result.stopReason, result.assessment).toBe("strategy_stop");
+			expect(result.steps[2].sessionId).not.toBe(result.steps[0].sessionId);
+			const records = events.filter((event) => event.type === "evidence" && event.evidence.source === "step");
+			expect(records).toHaveLength(3);
+			for (const event of records) {
+				if (event.type !== "evidence") throw new Error("Expected a step evidence event");
+				const saved = JSON.parse(await readFile(event.evidence.path, "utf8"));
+				expect(saved).toEqual(JSON.parse(JSON.stringify(result.steps[event.evidence.step - 1])));
+				expect(saved.evidence).not.toContainEqual(expect.objectContaining({ source: "step" }));
+			}
+			expect(harness.getPendingResponseCount()).toBe(0);
+		},
+	);
+
 	it("continues the registered method when its wording changes and normalizes tool-only fields", async () => {
 		const { harness, events, options } = await setup();
 		const { evidenceIds: _ids, ...initial } = decision("start");
@@ -356,6 +450,43 @@ describe("strategy loop", () => {
 		expect(harness.getPendingResponseCount()).toBe(1);
 	});
 
+	it("preserves a step-save failure during cancellation and returns the completed execution records", async () => {
+		const controller = new AbortController();
+		let settled = false;
+		const work = defineTool({
+			name: "work",
+			label: "Work",
+			description: "Wait for cancellation and settle.",
+			parameters: Type.Object({}),
+			async execute(_id, _params, signal) {
+				await new Promise<void>((resolve) => {
+					signal?.addEventListener("abort", () => resolve(), { once: true });
+					controller.abort();
+				});
+				settled = true;
+				return { content: [{ type: "text", text: "Partial observation before cancellation." }], details: {} };
+			},
+		});
+		const { harness, options, events } = await setup({ customTools: [work], signal: controller.signal });
+		options.onEvent = (event) => {
+			events.push(event);
+			if (event.type === "session_started" && event.role === "worker") {
+				mkdirSync(join(dirname(dirname(event.sessionFile!)), "evidence", "step-1.json"));
+			}
+		};
+		harness.setResponses([call("choose_strategy", decision("start")), call("work", {}), stop()]);
+		const result = await runWithStrategy(options);
+		expect(settled).toBe(true);
+		expect(result.stopReason, result.assessment).toBe("error");
+		expect(result.assessment).toContain("Could not save work step");
+		expect(result.steps).toHaveLength(1);
+		expect(result.steps[0]).toMatchObject({ status: "cancelled", evidence: [{ id: "evidence-1" }] });
+		expect(result.strategies[0].steps).toBe(1);
+		expect(events.some((event) => event.type === "evidence" && event.evidence.source === "step")).toBe(false);
+		expect(events.at(-2)?.type).toBe("session_closed");
+		expect(harness.getPendingResponseCount()).toBe(1);
+	});
+
 	it("lets a fresh reviewer read original evidence beyond its preview", async () => {
 		const content = `${"x".repeat(3000)} full-output-proof`;
 		const measure = defineTool({
@@ -429,7 +560,12 @@ describe("strategy loop", () => {
 			(context) => {
 				const state = JSON.parse(getMessageText(context.messages[0]).split("\n").slice(1).join("\n"));
 				expect(state.latestToolRecords.records.map((record: { id: string }) => record.id)).toEqual(["evidence-2"]);
-				expect(state.evidence.map((record: { id: string }) => record.id)).toEqual(["evidence-1", "evidence-2"]);
+				expect(state.evidence.map((record: { id: string }) => record.id)).toEqual([
+					"evidence-1",
+					"step-1",
+					"evidence-2",
+					"step-2",
+				]);
 				return call("read_evidence", { id: "evidence-1" });
 			},
 			(context) => {
